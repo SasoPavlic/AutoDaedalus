@@ -29,6 +29,7 @@ class ACO:
         if not self.storage.loaded_from_save:
             Log.header("STARTING ACO SEARCH", type="GREEN")
             self.best_ant = Ant(self.graph.generate_path(self.random_select))
+            # TODO (EVOLVE 1) remove when debugging graph.generate_path
             self.best_ant.evaluate(self.backend, self.storage)
             Log.info(self.best_ant)
         else:
@@ -74,7 +75,12 @@ class ACO:
             ant = Ant()
             # Generate ant's path using ACO selection rule
             ant.path = self.graph.generate_path(self.aco_select)
+            # Check if model includes Flatten layer (compressed data)
+            if not any(x.name == "FlattenNode" for x in ant.path):
+                Log.info(f"Skipping Ant, no Autoencoder architecture: {ant.path}")
+                continue
             # Evaluate how good is the new path
+            # TODO (EVOLVE 2) remove when debugging graph.generate_path
             ant.evaluate(self.backend, self.storage)
             ants.append(ant)
             Log.info(ant)
@@ -282,9 +288,10 @@ class Graph:
 
     def __init__(self, current_depth=0):
         self.topology = []
-        self.current_depth = current_depth
+        self.current_depth = cfg['min_depth'] if cfg['min_depth'] < cfg['max_depth'] else 0
         self.input_node = self.get_node(Node.create_using_type('Input'), current_depth)
-        self.increase_depth()
+        if self.current_depth == 0:
+            self.increase_depth()
 
     def get_node(self, node, depth):
         """Tries to retrieve a given node from the graph. If the node does not
@@ -319,6 +326,7 @@ class Graph:
             a path which contains Node objects.
         """
 
+        autoencoder_type = 'encode'
         current_node = self.input_node
         path = [current_node.create_deepcopy()]
         for depth in range(self.current_depth):
@@ -328,10 +336,39 @@ class Graph:
 
             # Select node using given rule
             current_node = select_rule(current_node.neighbours)
+
+            if current_node.type == 'Flatten' and autoencoder_type == 'encode':
+                path.append(current_node.create_deepcopy())
+                # path.append(self.get_node(Node.create_using_type('Flatten'), len(path)))
+                path.append(self.get_node(Node.create_using_type('Dense'), len(path)))
+                path.append(self.get_node(Node.create_using_type('Reshape'), len(path)))
+                autoencoder_type = 'decode'
+                current_node =  self.get_node(Node('ReShapeNode'), depth)
+                continue
+
+            if autoencoder_type == 'decode':
+                result = list(filter(lambda transition:
+                                     transition[0] != 'FlattenNode',
+                                     current_node.available_transitions))
+                current_node.available_transitions = result
+                path.append(current_node.create_deepcopy())
+                continue
+
             # Add only the copy of the node, so that original stays unmodified
             path.append(current_node.create_deepcopy())
 
-        completed_path = self.complete_path(path)
+        # Currently not used in this version
+        #completed_path = self.complete_path(path)
+
+        path.append(self.get_node(Node.create_using_type('Output'), len(path)))
+        completed_path = path
+
+        # TODO for debugging, printing generated graph
+        paths = ""
+        for x in completed_path:
+            paths += x.name + ","
+        print(paths)
+        # END debugging
         return completed_path
 
     def has_neighbours(self, node, depth):
@@ -371,7 +408,7 @@ class Graph:
         # in the path, because during the first few iterations these nodes will always be part
         # of the best path (as it's impossible to close path automatically when it's so short)
         # this would result in bias pheromone received by these nodes during later iterations
-        if path[-1].name in cfg['spatial_nodes']:
+        if path[-1].name in cfg['spatial_nodes'] and not any(x.name == "Flatten" for x in path):
             path.append(self.get_node(Node.create_using_type('Flatten'), len(path)))
         if path[-1].name in cfg['flat_nodes']:
             path.append(self.get_node(Node.create_using_type('Output'), len(path)))

@@ -3,9 +3,12 @@
 
 import context
 import tensorflow as tf
-
+import os
 from deepswarm.backends import Dataset, TFKerasBackend
 from deepswarm.deepswarm import DeepSwarm
+
+physical_devices = tf.config.experimental.list_physical_devices('GPU')
+tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # Load CIFAR-10 dataset
 cifar10 = tf.keras.datasets.cifar10

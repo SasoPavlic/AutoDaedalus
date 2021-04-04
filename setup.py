@@ -15,9 +15,10 @@ setuptools.setup(
     packages=setuptools.find_packages(),
     package_data={'deepswarm': ['../settings/default.yaml']},
     install_requires=[
-        'colorama==0.4.1',
-        'pyyaml==5.1',
-        'scikit-learn==0.20.3',
+        'colorama',
+        'pyyaml',
+        'scikit-learn',
+        'matplotlib'
     ],
     classifiers=[
         "Programming Language :: Python :: 3.6",

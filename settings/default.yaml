@@ -27,7 +27,7 @@ Nodes:
 
     InputNode:
         type: Input
-        attributes: 
+        attributes:
             shape: [!!python/tuple [28, 28, 1]]
         transitions:
             Conv2DNode: 1.0
@@ -44,7 +44,7 @@ Nodes:
             FlattenNode: 1.0
             DropoutSpatialNode: 1.1
             BatchNormalizationNode: 1.2
-    
+
     DropoutSpatialNode:
         type: Dropout
         attributes:

@@ -1,3 +1,4 @@
-colorama==0.4.1
-pyyaml==5.1
-scikit-learn==0.20.3
+colorama
+pyyaml
+scikit-learn
+matplotlib

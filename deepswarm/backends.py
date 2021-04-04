@@ -4,10 +4,11 @@
 import os
 import tensorflow as tf
 import time
-
 from abc import ABC, abstractmethod
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
+from tensorflow.keras.layers import *
+from vizualization import painter
 
 from . import cfg
 
@@ -122,26 +123,46 @@ class TFKerasBackend(BaseBackend):
     """Backend based on TensorFlow Keras API"""
 
     def __init__(self, dataset, optimizer=None):
+        # When using RTX 30.. series
+        # https://github.com/tensorflow/tensorflow/issues/45028
+        physical_devices = tf.config.experimental.list_physical_devices('GPU')
+        tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
         # If the user passes custom optimizer we serialize it, as reusing the
         # same optimizer instance causes crash in TensorFlow  1.13.1, see issue
         # https://github.com/Pattio/DeepSwarm/issues/3
+
         if optimizer is not None:
             optimizer = tf.keras.optimizers.serialize(optimizer)
 
         super().__init__(dataset, optimizer)
         self.data_format = K.image_data_format()
 
+
     def generate_model(self, path):
+        # model layers
+        layers = list()
+
         # Create an input layer
         input_layer = self.create_layer(path[0])
+        layers.append((input_layer, path[0]))
         layer = input_layer
 
         # Convert each node to layer and then connect it to the previous layer
-        for node in path[1:]:
+        for node in path[1:-1]:
+            print(f"previous layer: {layer.name}")
+            print(f"name of new node: {node.name}")
             layer = self.create_layer(node)(layer)
+            layers.append((layer, node))
+
+        output_layer = self.create_layer(path[-1])(layer)
+        layers.append((output_layer, node))
+
+
+
 
         # Return generated model
-        model = tf.keras.Model(inputs=input_layer, outputs=layer)
+        model = tf.keras.Model(inputs=input_layer, outputs=output_layer)
         self.compile_model(model)
         return model
 
@@ -177,7 +198,8 @@ class TFKerasBackend(BaseBackend):
         # names should be unique.") It happens when new layers are appended to
         # an existing model, but Keras fails to increment repeating layer names
         # i.e. conv_1 -> conv_2
-        parameters = {'name': str(time.time())}
+        #parameters = {'name': str(time.time())}
+        parameters = {'name': node.type + str(f"_{time.time()}")}
 
         if node.type == 'Input':
             parameters['shape'] = node.shape
@@ -193,6 +215,16 @@ class TFKerasBackend(BaseBackend):
             })
             return tf.keras.layers.Conv2D(**parameters)
 
+        if node.type == 'Conv2DTranspose':
+            parameters.update({
+                'filters': 64,
+                'kernel_size': node.kernel_size,
+                'padding': 'same',
+                'data_format': self.data_format,
+                'activation': self.map_activation(node.activation)
+            })
+            return tf.keras.layers.Conv2DTranspose(**parameters)
+
         if node.type == 'Pool2D':
             parameters.update({
                 'pool_size': node.pool_size,
@@ -205,11 +237,18 @@ class TFKerasBackend(BaseBackend):
             elif node.pool_type == 'average':
                 return tf.keras.layers.AveragePooling2D(**parameters)
 
+        if node.type == "UpSampling2D":
+            return tf.keras.layers.UpSampling2D(**parameters)
+
         if node.type == 'BatchNormalization':
             return tf.keras.layers.BatchNormalization(**parameters)
 
         if node.type == 'Flatten':
             return tf.keras.layers.Flatten(**parameters)
+
+        if node.type == 'Reshape':
+            parameters['target_shape'] = node.target_shape
+            return tf.keras.layers.Reshape(**parameters)
 
         if node.type == 'Dense':
             parameters.update({
@@ -226,10 +265,17 @@ class TFKerasBackend(BaseBackend):
 
         if node.type == 'Output':
             parameters.update({
-                'units': node.output_size,
-                'activation': self.map_activation(node.activation),
+                'filters': 1,
+                'kernel_size': node.kernel_size,
+                'padding': 'same',
+                'data_format': self.data_format,
+                'activation': self.map_activation(node.activation)
             })
-            return tf.keras.layers.Dense(**parameters)
+            # TODO make dynamic layer (when shape is different)
+            # Example of problematic NN
+            # InputNode,Conv2DNode,Pool2DNode,FlattenNode,DenseNode,ReShapeNode,Conv2DTransposeNode,BatchNormalizationNode,Conv2DNode,Pool2DNode,OutputNode,
+            #return tf.keras.layers.Conv2DTranspose(**parameters)
+            return Conv2DTranspose(1, (3, 3), strides=4, activation='sigmoid', padding='same')
 
         raise Exception('Not handled node type: %s' % str(node))
 
@@ -247,6 +293,7 @@ class TFKerasBackend(BaseBackend):
         raise Exception('Not handled activation: %s' % str(activation))
 
     def train_model(self, model):
+
         # Create a checkpoint path
         checkpoint_path = 'temp-model'
 
@@ -270,6 +317,8 @@ class TFKerasBackend(BaseBackend):
 
         # Train model
         model.fit(**fit_parameters)
+
+        painter.show_results_on_figure(model, self.dataset.x_test)
 
         # Load model from checkpoint
         checkpoint_model = self.load_model(checkpoint_path)

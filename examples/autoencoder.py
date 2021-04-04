@@ -2,25 +2,31 @@
 # Licensed under MIT License
 
 import context
+import os
 import tensorflow as tf
-
+import numpy as np
 from deepswarm.backends import Dataset, TFKerasBackend
 from deepswarm.deepswarm import DeepSwarm
 
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
+
 # Load MNIST dataset
 mnist = tf.keras.datasets.mnist
-(x_train, y_train), (x_test, y_test) = mnist.load_data()
+(x_train, _), (x_test, _) = mnist.load_data()
 # Normalize and reshape data
-x_train, x_test = x_train / 255.0, x_test / 255.0
-x_train = x_train.reshape(x_train.shape[0], 28, 28, 1)
-x_test = x_test.reshape(x_test.shape[0], 28, 28, 1)
+x_train = x_train.astype('float32') / 255.
+x_test = x_test.astype('float32') / 255.
+x_train = np.reshape(x_train, (len(x_train), 28, 28, 1))
+x_test = np.reshape(x_test, (len(x_test), 28, 28, 1))
+
 # Create dataset object, which controls all the data
 normalized_dataset = Dataset(
     training_examples=x_train,
-    training_labels=y_train,
+    training_labels=x_train,
     testing_examples=x_test,
-    testing_labels=y_test,
-    validation_split=0.33,
+    testing_labels=x_test,
+    validation_data=(x_test, x_test),
+    validation_split=0.1,
 )
 # Create backend responsible for training & validating
 backend = TFKerasBackend(dataset=normalized_dataset)
