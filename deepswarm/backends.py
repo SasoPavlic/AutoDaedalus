@@ -5,7 +5,7 @@ import os
 import tensorflow as tf
 import time
 from abc import ABC, abstractmethod
-
+from tensorflow.keras.optimizers import Adam
 from tensorflow.keras import Model
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
@@ -168,7 +168,7 @@ class TFKerasBackend(BaseBackend):
 
         # Return generated model
         model = tf.keras.Model(inputs=input_layer, outputs=output_layer, name='encoder')
-        self.compile_model(model)
+        #self.compile_model(model)
         return model
 
 
@@ -197,7 +197,7 @@ class TFKerasBackend(BaseBackend):
 
         # Return generated model
         model = tf.keras.Model(inputs=input_layer, outputs=output_layer, name='decoder')
-        self.compile_model(model)
+        #self.compile_model(model)
         return model
 
     def generate_model(self, autoencoder_path):
@@ -235,12 +235,16 @@ class TFKerasBackend(BaseBackend):
             'loss': cfg['backend']['loss'],
             'metrics': ['accuracy'],
         }
-
+        # TODO test compile
         # If user specified custom optimizer, use it instead of the default one
         # we also need to deserialize optimizer as it was serialized during init
-        if self.optimizer is not None:
-            optimizer_parameters['optimizer'] = tf.keras.optimizers.deserialize(self.optimizer)
-        model.compile(**optimizer_parameters)
+        # if self.optimizer is not None:
+        #     optimizer_parameters['optimizer'] = tf.keras.optimizers.deserialize(self.optimizer)
+        # model.compile(**optimizer_parameters)
+        INIT_LR = 1e-3
+        EPOCHS = cfg['backend']['epochs']
+        opt = Adam(lr=INIT_LR, decay=INIT_LR / EPOCHS)
+        model.compile(loss="mse", optimizer=opt, metrics='accuracy')
 
     def create_layer(self, node):
         # Workaround to prevent Keras from throwing an exception ("All layer
@@ -373,9 +377,11 @@ class TFKerasBackend(BaseBackend):
             fit_parameters['validation_data'] = self.dataset.validation_data
 
         # Train model
-        model.fit(**fit_parameters)
+        history = model.fit(**fit_parameters)
 
         painter.show_results_on_figure(model, self.dataset.x_test)
+        painter.show_training_graph(model, self.dataset.x_test, history, cfg)
+        painter.anomaly(model, self.dataset.x_test, cfg)
 
         # Load model from checkpoint
         checkpoint_model = self.load_model(checkpoint_path)
