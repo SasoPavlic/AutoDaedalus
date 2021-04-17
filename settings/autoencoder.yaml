@@ -1,8 +1,8 @@
 DeepSwarm:
     save_folder:
     metrics: accuracy
-    max_depth: 15
-    min_depth: 3
+    max_depth: 10 # Autoencoder
+    min_depth: 1 #Autoencoder without middle latent space
     reuse_patience: 1
 
     aco:
@@ -10,19 +10,17 @@ DeepSwarm:
             start: 0.1
             decay: 0.1
             evaporation: 0.1
-            verbose: False
+            verbose: 1
         greediness: 0.5
-        ant_count: 3
+        ant_count: 12
+        latent_dim: 16 # latent space (center of Autoencoder)
 
     backend:
-        epochs: 15
-        batch_size: 64
+        epochs: 100
+        batch_size: 256
         patience: 5
-        loss: binary_crossentropy
-        verbose: False
-
-    spatial_nodes: [InputNode, Conv2DNode, Pool2DNode, Sampling2DNode]
-    flat_nodes: [FlattenNode, Conv2DNode, Sampling2DNode]
+        loss: binary_crossentropy # End output is in binary
+        verbose: 1
 
 Nodes:
 
@@ -31,83 +29,39 @@ Nodes:
         attributes:
             shape: [!!python/tuple [28, 28, 1]]
         transitions:
-            Conv2DNode: 1.0
+            DenseNode: 1.0
 
-    Conv2DNode:
-        type: Conv2D
+    InputDecoderNode:
+        type: Input
         attributes:
-            filter_count: [32, 64, 128]
-            kernel_size: [1, 3, 5]
-            activation: [ReLU]
+            shape: [ !!python/tuple [ 14 ] ]
         transitions:
-            Conv2DNode: 0.4
-            Pool2DNode: 0.7
-            FlattenNode: 0.5
-
-    Pool2DNode:
-        type: Pool2D
-        attributes:
-            pool_type: [max, average]
-            pool_size: [2]
-            stride: [2, 3]
-        transitions:
-            Conv2DNode: 0.9
-            Pool2DNode: 1.0
-            FlattenNode: 1.2
+            Conv2DTransposeNode: 1.0
 
     FlattenNode:
-      type: Flatten
-      attributes: { }
-      transitions:
-        DenseNode: 1.0
-
-    DenseNode:
-        type: Dense
-        attributes:
-            output_size: [49]
-            activation: [Softmax]
+        type: Flatten
+        attributes: { }
         transitions:
-            ReShapeNode: 1.0
+            DenseNode: 1.0
 
     ReShapeNode:
         type: Reshape
         attributes:
-            target_shape: [!!python/tuple [7, 7, 1]]
+            target_shape: [ !!python/tuple [ 7, 7, 1 ] ]
         transitions:
-            Conv2DTransposeNode: 1.0
+            DenseNode: 1.0
 
-    Conv2DTransposeNode:
-        type: Conv2DTranspose
+    DenseNode:
+        type: Dense
         attributes:
-            filter_count: [ 32, 64, 128 ]
-            kernel_size: [1, 3]
-            activation: [ ReLU ]
+            output_size: [128, 64, 32, 16, 8, 4]
+            activation: [ReLU]
         transitions:
-            BatchNormalizationNode: 1.0
-
-    BatchNormalizationNode:
-        type: BatchNormalization
-        attributes: {}
-        transitions:
-            Conv2DNode: 1.0
-            Conv2DTransposeNode: 1.2
-
-    Sampling2DNode:
-        type: UpSampling2D
-        attributes:
-            shape: [!!python/tuple [2, 2]]
-        transitions:
-            Sampling2DNode: 0.8
-            Conv2DNode: 1.2
-            OutputNode: 1.0
+            DenseNode: 1.0
 
     OutputNode:
         type: Output
         attributes:
-            filter_count: [1]
-            kernel_size: [1, 3]
+            output_size: [1]
             activation: [Sigmoid]
         transitions: {}
-
-# Cekiraj izgradnjo modela
-# backend.py 149

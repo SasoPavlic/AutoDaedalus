@@ -28,7 +28,7 @@ class ACO:
         # Generate random ant only if the search started from zero
         if not self.storage.loaded_from_save:
             Log.header("STARTING ACO SEARCH", type="GREEN")
-            self.best_ant = Ant(self.graph.generate_path(self.random_select))
+            self.best_ant = Ant(self.graph.generate_autoencoder_path(self.random_select))
             # TODO (EVOLVE 1) remove when debugging graph.generate_path
             self.best_ant.evaluate(self.backend, self.storage)
             Log.info(self.best_ant)
@@ -72,13 +72,7 @@ class ACO:
         ants = []
         for ant_number in range(cfg['aco']['ant_count']):
             Log.header("GENERATING ANT %i" % (ant_number + 1))
-            ant = Ant()
-            # Generate ant's path using ACO selection rule
-            ant.path = self.graph.generate_path(self.aco_select)
-            # Check if model includes Flatten layer (compressed data)
-            if not any(x.name == "FlattenNode" for x in ant.path):
-                Log.info(f"Skipping Ant, no Autoencoder architecture: {ant.path}")
-                continue
+            ant = Ant(self.graph.generate_autoencoder_path(self.aco_select))
             # Evaluate how good is the new path
             # TODO (EVOLVE 2) remove when debugging graph.generate_path
             ant.evaluate(self.backend, self.storage)
@@ -224,7 +218,9 @@ class ACO:
 class Ant:
     """Class responsible for representing the ant."""
 
-    def __init__(self, path=[]):
+    def __init__(self, autoencoder, path=[]):
+        self.encoder = autoencoder[0]
+        self.decoder = autoencoder[1]
         self.path = path
         self.loss = math.inf
         self.accuracy = 0.0
@@ -240,14 +236,15 @@ class Ant:
         """
 
         # Extract path information
-        self.path_description, path_hashes = storage.hash_path(self.path)
+        self.path_description, path_hashes = storage.hash_path(self.encoder + self.decoder)
         self.path_hash = path_hashes[-1]
 
+        # Disabled since we can't use reuse model the same way as Conv-NN.
         # Check if the model already exists if yes, then just re-use it
-        existing_model, existing_model_hash = storage.load_model(backend, path_hashes, self.path)
+        existing_model, existing_model_hash = (None, None)#storage.load_model(backend, path_hashes, self.encoder + self.decoder)
         if existing_model is None:
             # Generate model
-            new_model = backend.generate_model(self.path)
+            new_model = backend.generate_model((self.encoder, self.decoder))
         else:
             # Re-use model
             new_model = existing_model
@@ -289,9 +286,11 @@ class Graph:
     def __init__(self, current_depth=0):
         self.topology = []
         self.current_depth = cfg['min_depth'] if cfg['min_depth'] < cfg['max_depth'] else 0
-        self.input_node = self.get_node(Node.create_using_type('Input'), current_depth)
+        self.input_node = self.get_node(Node.create_using_type('Input'), self.current_depth)
+        self.input_decoder_node = self.get_node(Node.create_using_name('InputDecoderNode'), current_depth)
         if self.current_depth == 0:
             self.increase_depth()
+        self.latent_dim = cfg['aco']['latent_dim']
 
     def get_node(self, node, depth):
         """Tries to retrieve a given node from the graph. If the node does not
@@ -315,18 +314,16 @@ class Graph:
 
         self.current_depth += 1
 
-    def generate_path(self, select_rule):
-        """Generates path through the graph based on given selection rule.
-
+    #region Deep Autoencoder
+    def generate_encoder_path(self, select_rule):
+        """Generates encoder path through the graph based on given selection rule.
         Args:
             select_rule ([NeigbourNode]): function which receives a list of
             neighbours.
-
         Returns:
-            a path which contains Node objects.
+            a encoder path which contains Node objects.
         """
 
-        autoencoder_type = 'encode'
         current_node = self.input_node
         path = [current_node.create_deepcopy()]
         for depth in range(self.current_depth):
@@ -336,39 +333,129 @@ class Graph:
 
             # Select node using given rule
             current_node = select_rule(current_node.neighbours)
-
-            if current_node.type == 'Flatten' and autoencoder_type == 'encode':
-                path.append(current_node.create_deepcopy())
-                # path.append(self.get_node(Node.create_using_type('Flatten'), len(path)))
-                path.append(self.get_node(Node.create_using_type('Dense'), len(path)))
-                path.append(self.get_node(Node.create_using_type('Reshape'), len(path)))
-                autoencoder_type = 'decode'
-                current_node =  self.get_node(Node('ReShapeNode'), depth)
-                continue
-
-            if autoencoder_type == 'decode':
-                result = list(filter(lambda transition:
-                                     transition[0] != 'FlattenNode',
-                                     current_node.available_transitions))
-                current_node.available_transitions = result
-                path.append(current_node.create_deepcopy())
-                continue
-
             # Add only the copy of the node, so that original stays unmodified
             path.append(current_node.create_deepcopy())
 
-        # Currently not used in this version
-        #completed_path = self.complete_path(path)
+
+        path.append(self.get_node(Node.create_using_type('Flatten'), len(path)))
+        dense_layer = self.get_node(Node.create_using_type('Dense'), len(path))
+        # Specify latent dimension
+        dense_layer.output_size = self.latent_dim
+        path.append(dense_layer)
+
+        return path
+
+    def generate_decoder_path(self, select_rule):
+        """Generates decoder path through the graph based on encoder.
+        Args:
+            select_rule ([NeigbourNode]): function which receives a list of
+            neighbours.
+        Returns:
+            a decoder path which contains Node objects.
+        """
+
+        current_node = self.input_decoder_node
+        current_node.shape = self.latent_dim
+        path = [current_node.create_deepcopy()]
+        current_node = self.get_node(Node.create_using_type('Dense'), len(path))
+        path.append(current_node)
+        current_node = self.get_node(Node.create_using_type('Reshape'), len(path))
+        path.append(current_node)
+
+        for depth in range(self.current_depth):
+            # If the node doesn't have any neighbours stop expanding the path
+            if not self.has_neighbours(current_node, depth):
+                break
+
+            # Select node using given rule
+            current_node = select_rule(current_node.neighbours)
+            # Add only the copy of the node, so that original stays unmodified
+            path.append(current_node.create_deepcopy())
+
+        path.append(self.get_node(Node.create_using_type('Output'), len(path)))
+
+        return path
+
+    #endregion Convolutional Autoencoder
+
+    #region Deep Autoencoder
+    def generate_deep_encoder_path(self, select_rule):
+        current_node = self.input_node
+        path = [current_node.create_deepcopy()]
+        for depth in range(self.current_depth):
+            # If the node doesn't have any neighbours stop expanding the path
+            if not self.has_neighbours(current_node, depth):
+                break
+
+            # Select node using given rule
+            current_node = select_rule(current_node.neighbours)
+            # Add only the copy of the node, so that original stays unmodified
+            path.append(current_node.create_deepcopy())
+
+        completed_path = path
+        return completed_path
+
+    def generate_deep_decoder_path(self, select_rule):
+        current_node = self.input_decoder_node
+        current_node.shape = self.latent_dim
+        path = [current_node.create_deepcopy()]
+
+        for depth in range(self.current_depth):
+            # If the node doesn't have any neighbours stop expanding the path
+            if not self.has_neighbours(current_node, depth):
+                break
+
+            # Select node using given rule
+            current_node = select_rule(current_node.neighbours)
+            # Add only the copy of the node, so that original stays unmodified
+            path.append(current_node.create_deepcopy())
 
         path.append(self.get_node(Node.create_using_type('Output'), len(path)))
         completed_path = path
+        return completed_path
 
-        # TODO for debugging, printing generated graph
-        paths = ""
-        for x in completed_path:
-            paths += x.name + ","
-        print(paths)
-        # END debugging
+    #endregion Deep Autoencoder
+
+    def generate_autoencoder_path(self, select_rule):
+        """Generates encoder and decoder
+
+        Args:
+            select_rule ([NeigbourNode]): function which receives a list of
+            neighbours.
+
+        Returns:
+            encoder and decoder paths
+        """
+
+        encoder = self.generate_encoder_path(select_rule)
+        decoder = self.generate_decoder_path(select_rule)
+        autoencoder = (encoder, decoder)
+
+        return autoencoder
+
+
+    def generate_path(self, select_rule):
+        """Generates path through the graph based on given selection rule.
+        Args:
+            select_rule ([NeigbourNode]): function which receives a list of
+            neighbours.
+        Returns:
+            a path which contains Node objects.
+        """
+
+        current_node = self.input_node
+        path = [current_node.create_deepcopy()]
+        for depth in range(self.current_depth):
+            # If the node doesn't have any neighbours stop expanding the path
+            if not self.has_neighbours(current_node, depth):
+                break
+
+            # Select node using given rule
+            current_node = select_rule(current_node.neighbours)
+            # Add only the copy of the node, so that original stays unmodified
+            path.append(current_node.create_deepcopy())
+
+        completed_path = self.complete_path(path)
         return completed_path
 
     def has_neighbours(self, node, depth):
@@ -395,10 +482,8 @@ class Graph:
 
     def complete_path(self, path):
         """Completes the path if it is not fully completed (i.e. missing OutputNode).
-
         Args:
             path [Node]: list of nodes defining the path.
-
         Returns:
             completed path which contains list of nodes.
         """
@@ -408,7 +493,7 @@ class Graph:
         # in the path, because during the first few iterations these nodes will always be part
         # of the best path (as it's impossible to close path automatically when it's so short)
         # this would result in bias pheromone received by these nodes during later iterations
-        if path[-1].name in cfg['spatial_nodes'] and not any(x.name == "Flatten" for x in path):
+        if path[-1].name in cfg['spatial_nodes']:
             path.append(self.get_node(Node.create_using_type('Flatten'), len(path)))
         if path[-1].name in cfg['flat_nodes']:
             path.append(self.get_node(Node.create_using_type('Output'), len(path)))
@@ -427,7 +512,8 @@ class Graph:
             for node in layer.values():
                 for neighbour in node.neighbours:
                     info.append("%s [%s] -> %f -> %s [%s]" % (node.name, hex(id(node)),
-                        neighbour.pheromone, neighbour.node.name, hex(id(neighbour.node))))
+                                                              neighbour.pheromone, neighbour.node.name,
+                                                              hex(id(neighbour.node))))
 
                     # If neighbour node doesn't have any attributes skip attribute info
                     if not neighbour.node.attributes:

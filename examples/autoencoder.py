@@ -26,7 +26,7 @@ normalized_dataset = Dataset(
     testing_examples=x_test,
     testing_labels=x_test,
     validation_data=(x_test, x_test),
-    validation_split=0.1,
+    validation_split=0.33,
 )
 # Create backend responsible for training & validating
 backend = TFKerasBackend(dataset=normalized_dataset)

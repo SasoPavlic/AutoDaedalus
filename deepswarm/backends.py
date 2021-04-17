@@ -5,11 +5,13 @@ import os
 import tensorflow as tf
 import time
 from abc import ABC, abstractmethod
+
+from tensorflow.keras import Model
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import *
 from vizualization import painter
-
+import numpy as np
 from . import cfg
 
 
@@ -123,7 +125,7 @@ class TFKerasBackend(BaseBackend):
     """Backend based on TensorFlow Keras API"""
 
     def __init__(self, dataset, optimizer=None):
-        # When using RTX 30.. series
+        # Needed when using Nvidia GPU RTX 30.. series
         # https://github.com/tensorflow/tensorflow/issues/45028
         physical_devices = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -137,9 +139,10 @@ class TFKerasBackend(BaseBackend):
 
         super().__init__(dataset, optimizer)
         self.data_format = K.image_data_format()
+        self.volume_size = None
 
 
-    def generate_model(self, path):
+    def generate_encoder(self, path):
         # model layers
         layers = list()
 
@@ -150,21 +153,67 @@ class TFKerasBackend(BaseBackend):
 
         # Convert each node to layer and then connect it to the previous layer
         for node in path[1:-1]:
-            print(f"previous layer: {layer.name}")
-            print(f"name of new node: {node.name}")
+            # print(f"previous layer: {layer.name}")
+            # print(f"name of new node: {node.name}")
+            layer = self.create_layer(node)(layer)
+            layers.append((layer, node))
+
+
+
+        output_layer = self.create_layer(path[-1])(layer)
+        layers.append((output_layer, node))
+        # Get volume size before flattening data (we need it when building a decoder)
+        self.volume_size = layers[-3][0].shape
+        print(f"Volume size: {self.volume_size}")
+
+        # Return generated model
+        model = tf.keras.Model(inputs=input_layer, outputs=output_layer, name='encoder')
+        self.compile_model(model)
+        return model
+
+
+    def generate_decoder(self, path):
+        # model layers
+        layers = list()
+
+        # Create an input layer
+        input_layer = self.create_layer(path[0])
+        layers.append((input_layer, path[0]))
+        layer = input_layer
+
+        path[1].output_size = np.prod(self.volume_size[1:])
+        path[2].target_shape = (self.volume_size[1],
+                                self.volume_size[2],
+                                self.volume_size[3])
+        # Convert each node to layer and then connect it to the previous layer
+        for node in path[1:-1]:
+            # print(f"previous layer: {layer.name}")
+            # print(f"name of new node: {node.name}")
             layer = self.create_layer(node)(layer)
             layers.append((layer, node))
 
         output_layer = self.create_layer(path[-1])(layer)
         layers.append((output_layer, node))
 
-
-
-
         # Return generated model
-        model = tf.keras.Model(inputs=input_layer, outputs=output_layer)
+        model = tf.keras.Model(inputs=input_layer, outputs=output_layer, name='decoder')
         self.compile_model(model)
         return model
+
+    def generate_model(self, autoencoder_path):
+
+        input_layer = self.create_layer(autoencoder_path[0][0])
+
+        encoder_model = self.generate_encoder(autoencoder_path[0])
+        print(encoder_model.summary())
+
+        decoder_model = self.generate_decoder(autoencoder_path[1])
+        print(decoder_model.summary())
+
+        # Return generated model
+        autoencoder_model = Model(input_layer, decoder_model(encoder_model(input_layer)),name="autoencoder")
+        self.compile_model(autoencoder_model)
+        return autoencoder_model
 
     def reuse_model(self, old_model, new_model_path, distance):
         # Find the starting point of the new model
@@ -265,6 +314,14 @@ class TFKerasBackend(BaseBackend):
 
         if node.type == 'Output':
             parameters.update({
+                'units': node.output_size,
+                'activation': self.map_activation(node.activation),
+            })
+            return tf.keras.layers.Dense(**parameters)
+
+        # TODO remove if conv-Autoencider will not be used
+        if node.type == 'Output':
+            parameters.update({
                 'filters': 1,
                 'kernel_size': node.kernel_size,
                 'padding': 'same',
@@ -296,17 +353,17 @@ class TFKerasBackend(BaseBackend):
 
         # Create a checkpoint path
         checkpoint_path = 'temp-model'
-
+        # TODO Fix callbacks
         # Setup training parameters
         fit_parameters = {
             'x': self.dataset.x_train,
             'y': self.dataset.y_train,
             'epochs': cfg['backend']['epochs'],
             'batch_size': cfg['backend']['batch_size'],
-            'callbacks': [
-                self.create_early_stop_callback(),
-                self.create_checkpoint_callback(checkpoint_path),
-            ],
+            # 'callbacks': [
+            #     self.create_early_stop_callback(),
+            #     self.create_checkpoint_callback(checkpoint_path),
+            # ],
             'validation_split': self.dataset.validation_split,
             'verbose': cfg['backend']['verbose'],
         }

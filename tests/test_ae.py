@@ -1,46 +1,66 @@
+from tensorflow.keras import Model
+from tensorflow.keras import backend as K
 from tensorflow import keras
 from tensorflow.keras.layers import *
 import tensorflow as tf
+import numpy as np
 
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
+filters=(32, 64)
+inputShape = (28, 28, 1)
+chanDim = -1
+latentDim = 49
+depth=1
 
-layers = list()
-#ENCODER
-inp = Input((28, 28,1))
-layers.append(inp)
-e = Conv2D(32, (3, 3), activation='relu')(inp)
-layers.append(e)
-e = MaxPooling2D((2, 2))(e)
-layers.append(e)
-e = Conv2D(64, (3, 3), activation='relu')(e)
-layers.append(e)
-e = MaxPooling2D((2, 2))(e)
-layers.append(e)
-e = Conv2D(64, (3, 3), activation='relu')(e)
-layers.append(e)
-l = Flatten()(e)
-layers.append(l)
-l = Dense(49, activation='softmax')(l)
-layers.append(l)
+# define the input to the encoder
+inputs = Input(shape=inputShape)
+x = inputs
 
-#DECODER
-d = Reshape((7,7,1))(l)
-layers.append(d)
-d = Conv2DTranspose(64,(3, 3), strides=2, activation='relu', padding='same')(d)
-layers.append(d)
-d = BatchNormalization()(d)
-layers.append(d)
-d = Conv2DTranspose(64,(3, 3), strides=2, activation='relu', padding='same')(d)
-layers.append(d)
-d = BatchNormalization()(d)
-layers.append(d)
-d = Conv2DTranspose(32,(3, 3), activation='relu', padding='same')(d)
-layers.append(d)
-decoded = Conv2DTranspose(1, (3, 3), activation='sigmoid', padding='same')(d)
-layers.append(decoded)
-autoencoder = keras.Model(inp, decoded)
+# loop over the number of filters
+for f in filters:
+    # apply a CONV => RELU => BN operation
+    x = Conv2D(f, (3, 3), strides=2, padding="same")(x)
+    x = LeakyReLU(alpha=0.2)(x)
+    x = BatchNormalization(axis=chanDim)(x)
+
+# flatten the network and then construct our latent vector
+volumeSize = K.int_shape(x)
+x = Flatten()(x)
+latent = Dense(latentDim)(x)
+
+# build the encoder model
+encoder = Model(inputs, latent, name="encoder")
+
+# start building the decoder model which will accept the
+# output of the encoder as its inputs
+latentInputs = Input(shape=(latentDim,))
+x = Dense(np.prod(volumeSize[1:]))(latentInputs)
+x = Reshape((volumeSize[1], volumeSize[2], volumeSize[3]))(x)
+
+# loop over our number of filters again, but this time in
+# reverse order
+for f in filters[::-1]:
+    # apply a CONV_TRANSPOSE => RELU => BN operation
+    x = Conv2DTranspose(f, (3, 3), strides=2,
+                        padding="same")(x)
+    x = LeakyReLU(alpha=0.2)(x)
+    x = BatchNormalization(axis=chanDim)(x)
+
+# apply a single CONV_TRANSPOSE layer used to recover the
+# original depth of the image
+x = Conv2DTranspose(depth, (3, 3), padding="same")(x)
+outputs = Activation("sigmoid")(x)
+
+# build the decoder model
+decoder = Model(latentInputs, outputs, name="decoder")
+
+# our autoencoder is the encoder + decoder
+autoencoder = Model(inputs, decoder(encoder(inputs)),
+                    name="autoencoder")
+
+# return a 3-tuple of the encoder, decoder, and autoencoder
 autoencoder.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
 autoencoder.summary()
 
@@ -57,8 +77,8 @@ x_test = np.reshape(x_test, (len(x_test), 28, 28, 1))
 from tensorflow.keras.callbacks import TensorBoard
 
 autoencoder.fit(x_train, x_train,
-                epochs=3,
-                batch_size=128,
+                epochs=25,
+                batch_size=32,
                 shuffle=True,
                 validation_data=(x_test, x_test),
                 callbacks=[TensorBoard(log_dir='/tmp/autoencoder')])

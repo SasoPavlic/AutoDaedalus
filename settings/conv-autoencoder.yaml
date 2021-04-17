@@ -1,0 +1,118 @@
+DeepSwarm:
+    save_folder:
+    metrics: accuracy
+    max_depth: 15
+    min_depth: 2
+    reuse_patience: 1
+
+    aco:
+        pheromone:
+            start: 0.1
+            decay: 0.1
+            evaporation: 0.1
+            verbose: False
+        greediness: 0.5
+        ant_count: 3
+        latent_dim: 16
+
+    backend:
+        epochs: 25
+        batch_size: 32
+        patience: 5
+        loss: binary_crossentropy
+        verbose: False
+
+    spatial_nodes: [InputNode, Conv2DNode, Pool2DNode, Sampling2DNode]
+    flat_nodes: [FlattenNode, Conv2DNode, Sampling2DNode]
+
+Nodes:
+
+    InputNode:
+        type: Input
+        attributes:
+            shape: [!!python/tuple [28, 28, 1]]
+        transitions:
+            Conv2DNode: 1.0
+
+    InputDecoderNode:
+        type: Input
+        attributes:
+            shape: [!!python/tuple [16]]
+        transitions:
+            Conv2DTransposeNode: 1.0
+
+    Conv2DNode:
+        type: Conv2D
+        attributes:
+            filter_count: [32, 64, 128]
+            kernel_size: [1, 3, 5]
+            activation: [ReLU]
+        transitions:
+            Conv2DNode: 0.4
+            Pool2DNode: 0.7
+            #FlattenNode: 0.5
+
+    Pool2DNode:
+        type: Pool2D
+        attributes:
+            pool_type: [max, average]
+            pool_size: [2]
+            stride: [2, 3]
+        transitions:
+            Conv2DNode: 0.9
+            Pool2DNode: 1.0
+            #FlattenNode: 1.2
+
+    FlattenNode:
+      type: Flatten
+      attributes: { }
+      transitions:
+        DenseNode: 1.0
+
+    DenseNode:
+        type: Dense
+        attributes:
+            output_size: [49]
+            activation: [Softmax]
+        transitions:
+            ReShapeNode: 1.0
+
+    ReShapeNode:
+        type: Reshape
+        attributes:
+            target_shape: [!!python/tuple [7, 7, 1]]
+        transitions:
+            Conv2DTransposeNode: 1.0
+
+    Conv2DTransposeNode:
+        type: Conv2DTranspose
+        attributes:
+            filter_count: [ 32, 64, 128 ]
+            kernel_size: [1, 3]
+            activation: [ ReLU ]
+        transitions:
+            BatchNormalizationNode: 1.0
+
+    BatchNormalizationNode:
+        type: BatchNormalization
+        attributes: {}
+        transitions:
+            #Sampling2DNode: 1.0
+            Conv2DTransposeNode: 1.0
+
+    Sampling2DNode:
+        type: UpSampling2D
+        attributes:
+            shape: [!!python/tuple [2, 2]]
+        transitions:
+            Sampling2DNode: 0.8
+            Conv2DNode: 1.2
+            OutputNode: 1.0
+
+    OutputNode:
+        type: Output
+        attributes:
+            filter_count: [1]
+            kernel_size: [1, 3]
+            activation: [Sigmoid]
+        transitions: {}

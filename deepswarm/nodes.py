@@ -51,6 +51,21 @@ class Node:
                 return cls(node)
         raise Exception('Type does not exist: %s' % str(type))
 
+    @classmethod
+    def create_using_name(cls, name):
+        """Create Node's instance using given type.
+
+        Args:
+            name (str): name defined in .yaml file.
+        Returns:
+            Node's instance.
+        """
+
+        for node in nodes:
+            if node == name:
+                return cls(node)
+        raise Exception('Name does not exist: %s' % str(type))
+
     def setup_attributes(self):
         """Adds attributes from the settings file."""
 
