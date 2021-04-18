@@ -1,7 +1,7 @@
 DeepSwarm:
     save_folder:
     metrics: accuracy
-    max_depth: 3 # Autoencoder
+    max_depth: 4 # Autoencoder
     min_depth: 1 #Autoencoder without middle latent space
     reuse_patience: 1
 
@@ -14,7 +14,7 @@ DeepSwarm:
         greediness: 0.5
         ant_count: 10
         latent_dim: 16 # latent space (center of Autoencoder)
-        quantile: 0.999
+        quantile: 0.99
 
     backend:
         epochs: 20
@@ -55,7 +55,7 @@ Nodes:
     DenseNode:
         type: Dense
         attributes:
-            output_size: [128, 64, 32, 16, 8, 4]
+            output_size: [128, 64, 32, 16, 8, 4, 2]
             activation: [ReLU]
         transitions:
             DenseNode: 1.0

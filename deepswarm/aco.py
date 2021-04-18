@@ -250,7 +250,7 @@ class Ant:
             new_model = existing_model
 
         # Train model
-        new_model = backend.train_model(new_model)
+        new_model = backend.train_model(new_model, storage)
         # Evaluate model
         self.loss, self.accuracy = backend.evaluate_model(new_model)
 

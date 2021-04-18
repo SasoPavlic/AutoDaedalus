@@ -9,25 +9,24 @@ physical_devices = tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 layers = list()
+
 input_img = Input(shape=(32, 32, 3))
 encoded = Dense(256, activation='relu')(input_img)
 encoded = Dense(128, activation='relu')(encoded)
 encoded = Dense(64, activation='relu')(encoded)
-volumneSize = K.int_shape(encoded)
+volumeSize = K.int_shape(encoded)
 flatten = Flatten()(encoded)
 flatten = Dense(32)(flatten)
 encoder_model = tf.keras.Model(inputs=input_img, outputs=flatten, name='encoder')
-print(encoder_model.summary())
 
 latentInputs = Input(shape=(32,))
-decoded = Dense(np.prod(volumneSize[1:]))(latentInputs)
-decoded = Reshape((volumneSize[1], volumneSize[2], volumneSize[3]))(decoded)
+decoded = Dense(np.prod(volumeSize[1:]))(latentInputs)
+decoded = Reshape((volumeSize[1], volumeSize[2], volumeSize[3]))(decoded)
 decoded = Dense(128, activation='relu')(decoded)
 encoded = Dense(256, activation='relu')(encoded)
 decoded = Dense(3, activation='sigmoid')(decoded)
-
-
 decoder_model = tf.keras.Model(inputs=latentInputs, outputs=decoded, name='decoder')
+
 print(decoder_model.summary())
 
 autoencoder = keras.Model(input_img, decoder_model(encoder_model(input_img)),name="autoencoder")

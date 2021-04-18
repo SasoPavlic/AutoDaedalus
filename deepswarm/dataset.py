@@ -2,12 +2,13 @@ from tensorflow.keras.datasets import mnist
 from sklearn.model_selection import train_test_split
 import numpy as np
 import random
+import tensorflow as tf
 from .log import Log
 import matplotlib.pyplot as plt
 
 
-def build_unsupervised_dataset(data, labels, validLabel=1,
-	anomalyLabel=3, contam=0.01, seed=42):
+def build_unsupervised_dataset(data, labels, validLabel,
+	anomalyLabel, contam, seed=42):
 	# grab all indexes of the supplied class label that are *truly*
 	# that particular label, then grab the indexes of the image
 	# labels that will serve as our "anomalies"
@@ -39,7 +40,7 @@ def build_unsupervised_dataset(data, labels, validLabel=1,
 def prepare_dataset():
 	# load the MNIST dataset
 	print("[INFO] loading MNIST dataset...")
-	((trainX, trainY), (testX, testY)) = mnist.load_data()
+	((trainX, trainY), (testX, testY)) = tf.keras.datasets.mnist.load_data()
 
 	# build our unsupervised dataset of images with a small amount of
 	# contamination (i.e., anomalies) added into it

@@ -11,6 +11,7 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import *
 from vizualization import painter
+from deepswarm import anomalies
 import numpy as np
 from . import cfg
 
@@ -353,7 +354,7 @@ class TFKerasBackend(BaseBackend):
             return tf.keras.activations.softmax
         raise Exception('Not handled activation: %s' % str(activation))
 
-    def train_model(self, model):
+    def train_model(self, model, storage):
 
         # Create a checkpoint path
         checkpoint_path = 'temp-model'
@@ -379,9 +380,11 @@ class TFKerasBackend(BaseBackend):
         # Train model
         history = model.fit(**fit_parameters)
 
-        painter.show_results_on_figure(model, self.dataset.x_test)
-        painter.show_training_graph(model, self.dataset.x_test, history, cfg)
-        painter.anomaly(model, self.dataset.x_test, cfg)
+        painter.show_results_on_figure(model, self.dataset.x_test, storage)
+        painter.show_training_graph(history, cfg, storage)
+        painter.show_MAE_loss(model, self.dataset.x_train, storage)
+
+        anomalies.find(model, self.dataset.x_test, cfg, storage)
 
         # Load model from checkpoint
         checkpoint_model = self.load_model(checkpoint_path)
