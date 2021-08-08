@@ -37,16 +37,16 @@ def build_unsupervised_dataset(data, labels, validLabel,
 	return images
 
 
-def prepare_dataset():
+def prepare_dataset(validLabel,anomalyLabel,contam):
 	# load the MNIST dataset
 	print("[INFO] loading MNIST dataset...")
+	# DATASET
 	((trainX, trainY), (testX, testY)) = tf.keras.datasets.mnist.load_data()
 
 	# build our unsupervised dataset of images with a small amount of
 	# contamination (i.e., anomalies) added into it
 	print("[INFO] creating unsupervised dataset...")
-	images = build_unsupervised_dataset(trainX, trainY, validLabel=1,
-										anomalyLabel=3, contam=0.01)
+	images = build_unsupervised_dataset(trainX, trainY, validLabel, anomalyLabel, contam)
 
 	# add a channel dimension to every image in the dataset, then scale
 	# the pixel intensities to the range [0, 1]

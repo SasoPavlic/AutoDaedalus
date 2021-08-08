@@ -1,8 +1,13 @@
+import datetime
+import os
+
+from keras.utils import plot_model
 from tensorflow import keras
 from tensorflow.keras.layers import *
 import tensorflow as tf
 from tensorflow.keras import backend as K
 import numpy as np
+from tensorflow.keras.utils import *
 
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -18,6 +23,8 @@ volumeSize = K.int_shape(encoded)
 flatten = Flatten()(encoded)
 flatten = Dense(32)(flatten)
 encoder_model = tf.keras.Model(inputs=input_img, outputs=flatten, name='encoder')
+plot_model(encoder_model, to_file='./logs/encoder_plot.png', show_shapes=True, show_layer_names=True)
+
 
 latentInputs = Input(shape=(32,))
 decoded = Dense(np.prod(volumeSize[1:]))(latentInputs)
@@ -27,11 +34,14 @@ encoded = Dense(256, activation='relu')(encoded)
 decoded = Dense(3, activation='sigmoid')(decoded)
 decoder_model = tf.keras.Model(inputs=latentInputs, outputs=decoded, name='decoder')
 
-print(decoder_model.summary())
+
+plot_model(decoder_model, to_file='./logs/decoder_plot.png', show_shapes=True, show_layer_names=True)
 
 autoencoder = keras.Model(input_img, decoder_model(encoder_model(input_img)),name="autoencoder")
 autoencoder.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
-#autoencoder.summary()
+
+print(autoencoder.summary())
+plot_model(autoencoder, to_file='./logs/autoencoder_plot.png', show_shapes=True, show_layer_names=True)
 
 from tensorflow.keras.datasets import cifar100
 import numpy as np
@@ -43,14 +53,19 @@ x_test = x_test.astype('float32') / 255.
 x_train = np.reshape(x_train, (len(x_train), 32, 32, 3))
 x_test = np.reshape(x_test, (len(x_test), 32, 32, 3))
 
-from tensorflow.keras.callbacks import TensorBoard
 
+
+log_dir = "./logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
+
+#autoencoder.layers[0].trainable = False
+# tensorboard --logdir ./logs/fit/
 autoencoder.fit(x_train, x_train,
-                epochs=1,
+                epochs=10,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(x_test, x_test),
-                callbacks=[TensorBoard(log_dir='/tmp/autoencoder')])
+                callbacks=[tensorboard_callback])
 
 decoded_imgs = autoencoder.predict(x_test)
 score, acc = autoencoder.evaluate(x_test, x_test, batch_size=128)

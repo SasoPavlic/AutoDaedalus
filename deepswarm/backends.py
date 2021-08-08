@@ -1,6 +1,6 @@
 # Copyright (c) 2019 Edvinas Byla
 # Licensed under MIT License
-
+import datetime
 import os
 import tensorflow as tf
 import time
@@ -10,6 +10,7 @@ from tensorflow.keras import Model
 from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import *
+from tensorflow.keras.utils import *
 from vizualization import painter
 from deepswarm import anomalies
 import numpy as np
@@ -125,11 +126,16 @@ class BaseBackend(ABC):
 class TFKerasBackend(BaseBackend):
     """Backend based on TensorFlow Keras API"""
 
+    tensorboard_callback = None
+
     def __init__(self, dataset, optimizer=None):
         # Needed when using Nvidia GPU RTX 30.. series
         # https://github.com/tensorflow/tensorflow/issues/45028
         physical_devices = tf.config.experimental.list_physical_devices('GPU')
         tf.config.experimental.set_memory_growth(physical_devices[0], True)
+
+        log_dir = os.path.dirname(os.getcwd()) + "/tests/logs/fit/" + datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+        self.tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram_freq=1)
 
         # If the user passes custom optimizer we serialize it, as reusing the
         # same optimizer instance causes crash in TensorFlow  1.13.1, see issue
@@ -212,7 +218,7 @@ class TFKerasBackend(BaseBackend):
         print(decoder_model.summary())
 
         # Return generated model
-        autoencoder_model = Model(input_layer, decoder_model(encoder_model(input_layer)),name="autoencoder")
+        autoencoder_model = Model(input_layer, decoder_model(encoder_model(input_layer)), name="autoencoder")
         self.compile_model(autoencoder_model)
         return autoencoder_model
 
@@ -354,21 +360,18 @@ class TFKerasBackend(BaseBackend):
             return tf.keras.activations.softmax
         raise Exception('Not handled activation: %s' % str(activation))
 
-    def train_model(self, model, storage):
+    def train_model(self, model, storage, epochs=cfg['backend']['epochs']):
 
         # Create a checkpoint path
         checkpoint_path = 'temp-model'
-        # TODO Fix callbacks
+
         # Setup training parameters
         fit_parameters = {
             'x': self.dataset.x_train,
             'y': self.dataset.y_train,
-            'epochs': cfg['backend']['epochs'],
+            'epochs': epochs,
             'batch_size': cfg['backend']['batch_size'],
-            # 'callbacks': [
-            #     self.create_early_stop_callback(),
-            #     self.create_checkpoint_callback(checkpoint_path),
-            # ],
+            'callbacks': [self.tensorboard_callback],
             'validation_split': self.dataset.validation_split,
             'verbose': cfg['backend']['verbose'],
         }
@@ -380,10 +383,12 @@ class TFKerasBackend(BaseBackend):
         # Train model
         history = model.fit(**fit_parameters)
 
+        # Display graphs
         painter.show_results_on_figure(model, self.dataset.x_test, storage)
-        painter.show_training_graph(history, cfg, storage)
+        painter.show_training_graph(history, cfg, epochs)
         painter.show_MAE_loss(model, self.dataset.x_train, storage)
 
+        # Find anomalies in data
         anomalies.find(model, self.dataset.x_test, cfg, storage)
 
         # Load model from checkpoint
@@ -394,7 +399,8 @@ class TFKerasBackend(BaseBackend):
         # Return checkpoint model if it exists, otherwise return trained model
         return checkpoint_model if checkpoint_model is not None else model
 
-    def fully_train_model(self, model, epochs, augment):
+    def fully_train_model(self, model, epochs, augment, storage):
+        # TODO remove
         # Setup validation data
         if self.dataset.validation_data is not None:
             x_val, y_val = self.dataset.validation_data
@@ -418,7 +424,7 @@ class TFKerasBackend(BaseBackend):
             generator=datagen.flow(x_train, y_train, batch_size=cfg['backend']['batch_size']),
             steps_per_epoch=len(self.dataset.x_train) / cfg['backend']['batch_size'],
             epochs=epochs,
-            callbacks=[self.create_checkpoint_callback(checkpoint_path)],
+            callbacks=[self.create_checkpoint_callback(checkpoint_path), self.tensorboard_callback],
             validation_data=(x_val, y_val),
             verbose=cfg['backend']['verbose'],
         )

@@ -28,6 +28,7 @@ class ACO:
         # Generate random ant only if the search started from zero
         if not self.storage.loaded_from_save:
             Log.header("STARTING ACO SEARCH", type="GREEN")
+            # Generate Autoencoder graph
             self.best_ant = Ant(self.graph.generate_autoencoder_path(self.random_select))
             # TODO (EVOLVE 1) remove when debugging graph.generate_path
             self.best_ant.evaluate(self.backend, self.storage)

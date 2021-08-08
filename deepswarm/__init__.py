@@ -59,6 +59,7 @@ settings['script'] = os.path.basename(sys.argv[0])
 settings['settings_file'] = str(settings_file_path)
 
 # Create convenient variables
+data_config = settings["DataConfig"]
 cfg = settings["DeepSwarm"]
 nodes = settings["Nodes"]
 left_cost_is_better = operator.le if cfg['metrics'] == 'loss' else operator.ge

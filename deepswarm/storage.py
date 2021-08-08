@@ -164,6 +164,7 @@ class Storage:
             model: model which represents neural network structure.
         """
         # TODO add results
+        # TODO Nadaljuj
         save_path = self.current_path / Storage.DIR["MODEL"] / model_name
         backend.save_model(model, save_path)
 

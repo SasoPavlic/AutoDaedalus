@@ -1,11 +1,11 @@
 from matplotlib import pyplot as plt
 from tensorflow.keras import backend as K
 import numpy as np
+from deepswarm import cfg
 
-
-def show_training_graph(history, cfg, storage):
+def show_training_graph(history, cfg, epochs=cfg['backend']['epochs']):
     # Loss
-    N = np.arange(0, cfg['backend']['epochs'])
+    N = np.arange(0, epochs)
     plt.style.use("ggplot")
     plt.figure()
     plt.plot(N, history.history["loss"], label="train_loss")

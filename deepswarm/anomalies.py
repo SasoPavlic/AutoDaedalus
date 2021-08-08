@@ -17,10 +17,10 @@ def find(model, x_test, cfg, storage):
     # compute the q-th quantile of the errors which serves as our
     # threshold to identify anomalies -- any data point that our model
     # reconstructed with > threshold error will be marked as an outlier
-    thresh = np.quantile(errors, cfg['aco']['quantile'])
+    thresh = np.quantile(errors, cfg['anomaly']['quantile'])
     idxs = np.where(np.array(errors) >= thresh)[0]
     print("[INFO] mse threshold: {}".format(thresh))
-    print("[INFO] {} outliers found".format(len(idxs)))
+    print("[INFO] {} outliers found".format(len(idxs)) + f" out of {len(errors)} instances")
 
     # initialize the outputs array
     outputs = None
@@ -47,5 +47,5 @@ def find(model, x_test, cfg, storage):
     # show the output visualization
     vol_size = K.int_shape(outputs)
     plt.imshow(outputs.reshape(vol_size[0], vol_size[1]))
-    plt.title("(Anomaly detection) Orginal vs. recunstructed")
+    plt.title("(Anomaly detection) \nOrginal vs. recunstructed")
     plt.show()
