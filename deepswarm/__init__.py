@@ -21,10 +21,10 @@ args, _ = parser.parse_known_args()
 # Retrieve filename without the extension
 filename = os.path.splitext(args.settings_file_name)[0]
 
-# If mnist.yaml doesn't exist it means that the package was installed via pip in
+# If autoencoder.yaml doesn't exist it means that the package was installed via pip in
 # which case we should use the current working directory as the base path
 base_path = Path(os.path.dirname(os.path.dirname(__file__)))
-if not (base_path / 'settings' / 'mnist.yaml').exists():
+if not (base_path / 'settings' / 'autoencoder.yaml').exists():
     module_path = base_path
 
     # Change the base path to the current working directory
