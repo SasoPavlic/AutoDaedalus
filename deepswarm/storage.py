@@ -3,8 +3,10 @@
 
 import hashlib
 import pickle
-
+from matplotlib import pyplot as plt
 from datetime import datetime
+
+from tensorflow.python.keras.utils.vis_utils import plot_model
 
 from . import base_path, cfg, left_cost_is_better
 
@@ -65,6 +67,16 @@ class Storage:
         """Saves DeepSwarm object to the backup directory."""
 
         self.save_object(self.deepswarm, Storage.ITEM["BACKUP"])
+
+    def save_plot(self, path_hashes, plt_name, plot):
+        model_name = path_hashes[-1]
+        save_path = self.current_path / Storage.DIR["MODEL"] / model_name
+        plot.savefig(save_path / plt_name)
+
+    def save_model_shape(self, path_hashes, plt_name, model):
+        model_name = path_hashes[-1]
+        save_path = self.current_path / Storage.DIR["MODEL"] / model_name
+        plot_model(model, to_file= save_path / plt_name, show_shapes=True, show_layer_names=True)
 
     def save_model(self, backend, model, path_hashes, cost):
         """Saves the model and adds its information to the dictionaries.
@@ -163,8 +175,6 @@ class Storage:
             model_name: name of the model.
             model: model which represents neural network structure.
         """
-        # TODO add results
-        # TODO Nadaljuj
         save_path = self.current_path / Storage.DIR["MODEL"] / model_name
         backend.save_model(model, save_path)
 

@@ -11,8 +11,6 @@ from sklearn.model_selection import train_test_split
 from tensorflow.keras import backend as K
 from tensorflow.keras.layers import *
 from tensorflow.keras.utils import *
-from vizualization import painter
-from deepswarm import anomalies
 import numpy as np
 from . import cfg
 
@@ -147,6 +145,8 @@ class TFKerasBackend(BaseBackend):
         super().__init__(dataset, optimizer)
         self.data_format = K.image_data_format()
         self.volume_size = None
+        self.encoder_model = None
+        self.decoder_model = None
 
 
     def generate_encoder(self, path):
@@ -212,15 +212,23 @@ class TFKerasBackend(BaseBackend):
         input_layer = self.create_layer(autoencoder_path[0][0])
 
         encoder_model = self.generate_encoder(autoencoder_path[0])
+        self.encoder_model = encoder_model
         print(encoder_model.summary())
 
         decoder_model = self.generate_decoder(autoencoder_path[1])
+        self.decoder_model = decoder_model
         print(decoder_model.summary())
 
         # Return generated model
         autoencoder_model = Model(input_layer, decoder_model(encoder_model(input_layer)), name="autoencoder")
         self.compile_model(autoencoder_model)
         return autoencoder_model
+
+    def get_encoder_model(self):
+        return self.encoder_model
+
+    def get_decoder_model(self):
+        return self.decoder_model
 
     def reuse_model(self, old_model, new_model_path, distance):
         # Find the starting point of the new model
@@ -242,7 +250,6 @@ class TFKerasBackend(BaseBackend):
             'loss': cfg['backend']['loss'],
             'metrics': ['accuracy'],
         }
-        # TODO test compile
         # If user specified custom optimizer, use it instead of the default one
         # we also need to deserialize optimizer as it was serialized during init
         # if self.optimizer is not None:
@@ -383,24 +390,16 @@ class TFKerasBackend(BaseBackend):
         # Train model
         history = model.fit(**fit_parameters)
 
-        # Display graphs
-        painter.show_results_on_figure(model, self.dataset.x_test, storage)
-        painter.show_training_graph(history, cfg, epochs)
-        painter.show_MAE_loss(model, self.dataset.x_train, storage)
-
-        # Find anomalies in data
-        anomalies.find(model, self.dataset.x_test, cfg, storage)
-
         # Load model from checkpoint
         checkpoint_model = self.load_model(checkpoint_path)
         # Delete checkpoint
         if os.path.isfile(checkpoint_path):
             os.remove(checkpoint_path)
         # Return checkpoint model if it exists, otherwise return trained model
-        return checkpoint_model if checkpoint_model is not None else model
+        return checkpoint_model if checkpoint_model is not None else (model,history)
 
     def fully_train_model(self, model, epochs, augment, storage):
-        # TODO remove
+        # TODO remove (no longer used)
         # Setup validation data
         if self.dataset.validation_data is not None:
             x_val, y_val = self.dataset.validation_data

@@ -48,4 +48,4 @@ def find(model, x_test, cfg, storage):
     vol_size = K.int_shape(outputs)
     plt.imshow(outputs.reshape(vol_size[0], vol_size[1]))
     plt.title("(Anomaly detection) \nOrginal vs. recunstructed")
-    plt.show()
+    return plt

@@ -4,10 +4,13 @@
 import math
 import random
 
+from tensorflow.python.keras.models import Model
+
 from . import cfg, left_cost_is_better
 from .log import Log
 from .nodes import Node, NeighbourNode
-
+from vizualization import painter
+from deepswarm import anomalies
 
 class ACO:
     """Class responsible for performing Ant Colony Optimization."""
@@ -30,7 +33,7 @@ class ACO:
             Log.header("STARTING ACO SEARCH", type="GREEN")
             # Generate Autoencoder graph
             self.best_ant = Ant(self.graph.generate_autoencoder_path(self.random_select))
-            # TODO (EVOLVE 1) remove when debugging graph.generate_path
+            # TODO (Speed improvements 1) remove when debugging graph.generate_path
             self.best_ant.evaluate(self.backend, self.storage)
             Log.info(self.best_ant)
         else:
@@ -75,7 +78,7 @@ class ACO:
             Log.header("GENERATING ANT %i" % (ant_number + 1))
             ant = Ant(self.graph.generate_autoencoder_path(self.aco_select))
             # Evaluate how good is the new path
-            # TODO (EVOLVE 2) remove when debugging graph.generate_path
+            # TODO (Speed improvements 2) remove when debugging graph.generate_path
             ant.evaluate(self.backend, self.storage)
             ants.append(ant)
             Log.info(ant)
@@ -251,7 +254,7 @@ class Ant:
             new_model = existing_model
 
         # Train model
-        new_model = backend.train_model(new_model, storage)
+        new_model, history = backend.train_model(new_model, storage)
         # Evaluate model
         self.loss, self.accuracy = backend.evaluate_model(new_model)
 
@@ -261,6 +264,32 @@ class Ant:
 
         # Save model
         storage.save_model(backend, new_model, path_hashes, self.cost)
+        storage.save_model_shape(path_hashes, 'encoder_shape.png', backend.get_encoder_model())
+        storage.save_model_shape(path_hashes, 'decoder_shape.png', backend.get_decoder_model())
+
+        # Display and save graphs
+        plt_loss = painter.training_loss(history, cfg, epochs=cfg['backend']['epochs'])
+        storage.save_plot(path_hashes, 'plt_loss.png', plt_loss)
+        plt_loss.show()
+
+        plt_acc = painter.training_acc(history, cfg, epochs=cfg['backend']['epochs'])
+        storage.save_plot(path_hashes, 'plt_acc.png', plt_acc)
+        plt_acc.show()
+
+        plt_recunstructed_results = painter.reconstructed_results(new_model, backend.dataset.x_test, storage)
+        storage.save_plot(path_hashes, 'plt_recunstructed_results.png', plt_recunstructed_results)
+        plt_recunstructed_results.show()
+
+        plt_MAE_loss = painter.MAE_loss(new_model, backend.dataset.x_train, storage)
+        storage.save_plot(path_hashes, 'plt_MAE_loss.png', plt_MAE_loss)
+        plt_MAE_loss.show()
+
+        # Find anomalies in data
+        plt_anomalies = anomalies.find(new_model, backend.dataset.x_test, cfg, storage)
+        storage.save_plot(path_hashes, 'plt_anomalies.png', plt_anomalies)
+        plt_anomalies.show()
+
+
 
     @property
     def cost(self):

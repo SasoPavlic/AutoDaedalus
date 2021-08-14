@@ -2,11 +2,13 @@ DataConfig:
     valid_label: 1
     anomaly_label: 3
     contamination: 0.01
+    test_size: 0.2
+    random_state: 42
 
 DeepSwarm:
     save_folder:
     metrics: accuracy
-    max_depth: 3 # Autoencoder
+    max_depth: 4 # Autoencoder
     min_depth: 1 #Autoencoder without middle latent space
     reuse_patience: 1
 
@@ -17,7 +19,7 @@ DeepSwarm:
             evaporation: 0.1
             verbose: 1
         greediness: 0.5
-        ant_count: 3
+        ant_count: 9
         latent_dim: 16 # latent space (center of Autoencoder)
 
     anomaly:

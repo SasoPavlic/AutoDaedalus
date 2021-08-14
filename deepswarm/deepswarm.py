@@ -64,7 +64,7 @@ class DeepSwarm:
 
         # Train the network
         model_name = 'best-trained-topology'
-        trained_topology = self.backend.train_model(model, self.storage, epochs)
+        trained_topology, history = self.backend.train_model(model, self.storage, epochs)
         loss_new, accuracy_new = self.backend.evaluate_model(trained_topology)
 
         # Setup the metrics

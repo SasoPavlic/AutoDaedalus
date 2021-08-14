@@ -3,7 +3,7 @@ from tensorflow.keras import backend as K
 import numpy as np
 from deepswarm import cfg
 
-def show_training_graph(history, cfg, epochs=cfg['backend']['epochs']):
+def training_loss(history, cfg, epochs=cfg['backend']['epochs']):
     # Loss
     N = np.arange(0, epochs)
     plt.style.use("ggplot")
@@ -15,9 +15,13 @@ def show_training_graph(history, cfg, epochs=cfg['backend']['epochs']):
     plt.xlabel("Epoch #")
     plt.ylabel("Loss")
     plt.legend(loc="lower left")
-    plt.show()
 
+    return plt
+
+
+def training_acc(history, cfg, epochs=cfg['backend']['epochs']):
     # Accuracy
+    N = np.arange(0, epochs)
     plt.style.use("ggplot")
     plt.figure()
 
@@ -28,10 +32,11 @@ def show_training_graph(history, cfg, epochs=cfg['backend']['epochs']):
     plt.xlabel("Epoch #")
     plt.ylabel("Loss")
     plt.legend(loc="lower left")
-    plt.show()
+
+    return plt
 
 
-def show_results_on_figure(model, x_test, storage):
+def reconstructed_results(model, x_test, storage):
     """Visualize on image predicted results and train data
     Args:
         model: model which represents neural network structure.
@@ -62,10 +67,11 @@ def show_results_on_figure(model, x_test, storage):
         plt.gray()
         ax.get_xaxis().set_visible(False)
         ax.get_yaxis().set_visible(False)
-    plt.show()
+
+    return plt
 
 
-def show_MAE_loss(model, x_train, storage):
+def MAE_loss(model, x_train, storage):
     # Get train MAE loss.
     decoded = model.predict(x_train)
     errors = []
@@ -81,8 +87,8 @@ def show_MAE_loss(model, x_train, storage):
     plt.hist(errors, bins=50)
     plt.xlabel("Train MAE loss")
     plt.ylabel("No of samples")
-    plt.show()
 
     # Get reconstruction loss threshold.
     threshold = np.max(errors)
     print("Reconstruction error threshold: ", threshold)
+    return plt

@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 
 def build_unsupervised_dataset(data, labels, validLabel,
-	anomalyLabel, contam, seed=42):
+	anomalyLabel, contamination, seed=42):
 	# grab all indexes of the supplied class label that are *truly*
 	# that particular label, then grab the indexes of the image
 	# labels that will serve as our "anomalies"
@@ -20,7 +20,7 @@ def build_unsupervised_dataset(data, labels, validLabel,
 	random.shuffle(anomalyIdxs)
 
 	# compute the total number of anomaly data points to select
-	i = int(len(validIdxs) * contam)
+	i = int(len(validIdxs) * contamination)
 	anomalyIdxs = anomalyIdxs[:i]
 
 	# use NumPy array indexing to extract both the valid images and
@@ -37,7 +37,7 @@ def build_unsupervised_dataset(data, labels, validLabel,
 	return images
 
 
-def prepare_dataset(validLabel,anomalyLabel,contam):
+def prepare_dataset(validLabel, anomalyLabel, contamination, test_size, random_state):
 	# load the MNIST dataset
 	print("[INFO] loading MNIST dataset...")
 	# DATASET
@@ -46,7 +46,7 @@ def prepare_dataset(validLabel,anomalyLabel,contam):
 	# build our unsupervised dataset of images with a small amount of
 	# contamination (i.e., anomalies) added into it
 	print("[INFO] creating unsupervised dataset...")
-	images = build_unsupervised_dataset(trainX, trainY, validLabel, anomalyLabel, contam)
+	images = build_unsupervised_dataset(trainX, trainY, validLabel, anomalyLabel, contamination)
 
 	# add a channel dimension to every image in the dataset, then scale
 	# the pixel intensities to the range [0, 1]
@@ -54,8 +54,7 @@ def prepare_dataset(validLabel,anomalyLabel,contam):
 	images = images.astype("float32") / 255.0
 
 	# construct the training and testing split
-	(trainX, testX) = train_test_split(images, test_size=0.2,
-									   random_state=42)
+	(trainX, testX) = train_test_split(images, test_size=test_size, random_state=random_state)
 
 	return (trainX, testX)
 

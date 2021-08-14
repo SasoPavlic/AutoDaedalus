@@ -38,7 +38,7 @@ decoder_model = tf.keras.Model(inputs=latentInputs, outputs=decoded, name='decod
 plot_model(decoder_model, to_file='./logs/decoder_plot.png', show_shapes=True, show_layer_names=True)
 
 autoencoder = keras.Model(input_img, decoder_model(encoder_model(input_img)),name="autoencoder")
-autoencoder.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy'])
+autoencoder.compile(optimizer='adam', loss='binary_crossentropy', metrics=['accuracy','AUC'])
 
 print(autoencoder.summary())
 plot_model(autoencoder, to_file='./logs/autoencoder_plot.png', show_shapes=True, show_layer_names=True)
@@ -61,14 +61,14 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 #autoencoder.layers[0].trainable = False
 # tensorboard --logdir ./logs/fit/
 autoencoder.fit(x_train, x_train,
-                epochs=10,
+                epochs=3,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(x_test, x_test),
                 callbacks=[tensorboard_callback])
 
 decoded_imgs = autoencoder.predict(x_test)
-score, acc = autoencoder.evaluate(x_test, x_test, batch_size=128)
+score, acc, *all_metrices = autoencoder.evaluate(x_test, x_test, batch_size=128)
 
 test= K.int_shape(x_test)
 print()

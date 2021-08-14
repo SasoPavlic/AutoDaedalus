@@ -10,9 +10,17 @@ from deepswarm import data_config
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # or any {'0', '1', '2'}
 
 # Contaminate dataset with anomalies (e.g. dataset with 99% of 1 digits and 1% of 3 digits)
-(x_train, x_test) = prepare_dataset(validLabel=data_config["valid_label"],
-                                    anomalyLabel=data_config["anomaly_label"],
-                                    contam=data_config["contamination"])
+validLabel = data_config["valid_label"]
+anomalyLabel = data_config["anomaly_label"]
+contamination = data_config["contamination"]
+test_size = data_config["test_size"]
+random_state = data_config["random_state"]
+
+(x_train, x_test) = prepare_dataset(validLabel,
+                                    anomalyLabel,
+                                    contamination,
+                                    test_size,
+                                    random_state)
 
 # Create dataset object, which controls all the data
 normalized_dataset = Dataset(
