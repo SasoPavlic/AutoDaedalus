@@ -1,7 +1,11 @@
-from matplotlib import pyplot as plt
+import seaborn
+from tensorflow import keras
 from tensorflow.keras import backend as K
 import numpy as np
+from matplotlib import pyplot as plt
+
 from deepswarm import cfg
+
 
 def training_loss(history, cfg, epochs=cfg['backend']['epochs']):
     # Loss
@@ -91,4 +95,16 @@ def MAE_loss(model, x_train, storage):
     # Get reconstruction loss threshold.
     threshold = np.max(errors)
     print("Reconstruction error threshold: ", threshold)
+    return plt
+
+
+def encoded_image(model, x_test):
+    # https://stackoverflow.com/questions/51091106/correct-way-to-get-output-of-intermediate-layer-in-keras-model
+    layer_name = 'encoder'
+    intermediate_layer_model = keras.Model(inputs=model.input,
+                                     outputs=model.get_layer(layer_name).output)
+    intermediate_output = intermediate_layer_model.predict(x_test)
+
+    fig, ax = plt.subplots()
+    seaborn.heatmap([intermediate_output[0]])
     return plt

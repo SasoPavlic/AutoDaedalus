@@ -284,6 +284,11 @@ class Ant:
         storage.save_plot(path_hashes, 'plt_MAE_loss.png', plt_MAE_loss)
         plt_MAE_loss.show()
 
+        # NOT used since keras is throwing an error: Graph disconnected
+        # plt_encoded_image = painter.encoded_image(new_model, backend.dataset.x_test)
+        # storage.save_plot(path_hashes, 'plt_encoded_image.png', plt_encoded_image)
+        # plt_encoded_image.show()
+
         # Find anomalies in data
         plt_anomalies = anomalies.find(new_model, backend.dataset.x_test, cfg, storage)
         storage.save_plot(path_hashes, 'plt_anomalies.png', plt_anomalies)

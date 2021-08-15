@@ -13,7 +13,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/Pattio/DeepSwarm",
     packages=setuptools.find_packages(),
-    package_data={'deepswarm': ['../settings/default.yaml']},
+    package_data={'deepswarm': ['../settings/autoencoder.yaml']},
     install_requires=[
         'colorama',
         'pyyaml',

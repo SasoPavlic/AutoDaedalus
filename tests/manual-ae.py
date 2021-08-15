@@ -1,6 +1,8 @@
 import datetime
 import os
 
+import numpy
+import seaborn
 from keras.utils import plot_model
 from tensorflow import keras
 from tensorflow.keras.layers import *
@@ -8,6 +10,8 @@ import tensorflow as tf
 from tensorflow.keras import backend as K
 import numpy as np
 from tensorflow.keras.utils import *
+from matplotlib import pyplot as plt
+
 
 
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -61,21 +65,31 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 #autoencoder.layers[0].trainable = False
 # tensorboard --logdir ./logs/fit/
 autoencoder.fit(x_train, x_train,
-                epochs=3,
+                epochs=1,
                 batch_size=256,
                 shuffle=True,
                 validation_data=(x_test, x_test),
                 callbacks=[tensorboard_callback])
 
+# https://stackoverflow.com/questions/51091106/correct-way-to-get-output-of-intermediate-layer-in-keras-model
+layer_name = 'encoder'
+intermediate_layer_model = keras.Model(inputs=autoencoder.input,
+                                 outputs=autoencoder.get_layer(layer_name).output)
+intermediate_output = intermediate_layer_model.predict(x_test)
+
+
 decoded_imgs = autoencoder.predict(x_test)
+decoded_imgs = intermediate_output
 score, acc, *all_metrices = autoencoder.evaluate(x_test, x_test, batch_size=128)
+
+
+
 
 test= K.int_shape(x_test)
 print()
 print('Score: %1.4f' % score)
 print('Evaluation Accuracy: %1.2f%%' % (acc*100))
 
-from matplotlib import pyplot as plt
 vol_size= K.int_shape(x_test)
 dims = (None, None, None)
 if vol_size[3] > 1:

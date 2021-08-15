@@ -36,8 +36,8 @@ if not (base_path / 'settings' / 'autoencoder.yaml').exists():
         settings_directory.mkdir()
 
     # If default settings file doesn't exist, copy one from the module directory
-    module_default_config = module_path / 'settings/default.yaml'
-    settings_default_config = settings_directory / 'default.yaml'
+    module_default_config = module_path / 'settings/autoencoder.yaml'
+    settings_default_config = settings_directory / 'autoencoder.yaml'
     if not settings_default_config.exists() and module_default_config.exists():
         copyfile(module_default_config, settings_default_config)
 

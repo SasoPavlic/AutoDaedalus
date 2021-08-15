@@ -12,6 +12,7 @@ def build_unsupervised_dataset(data, labels, validLabel,
 	# grab all indexes of the supplied class label that are *truly*
 	# that particular label, then grab the indexes of the image
 	# labels that will serve as our "anomalies"
+
 	validIdxs = np.where(labels == validLabel)[0]
 	anomalyIdxs = np.where(labels == anomalyLabel)[0]
 

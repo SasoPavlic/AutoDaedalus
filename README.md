@@ -45,7 +45,7 @@ trained_topology = deepswarm.train_topology(topology, 50)
    ```sh
    touch train.py
    ```
-2. Create settings directory which contains `default.yaml` file. Alternatively you can run the script and instantly stop it, as this should automatically create settings directory which contains `default.yaml` file
+2. Create settings directory which contains `autoencoder.yaml` file. Alternatively you can run the script and instantly stop it, as this should automatically create settings directory which contains `autoencoder.yaml` file
 
 3. Update the newly created YAML file to your dataset needs. The only two important changes you must make are: (1) change the loss function to reflect your task (2) change the shape of input and output nodes
 

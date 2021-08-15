@@ -246,19 +246,15 @@ class TFKerasBackend(BaseBackend):
 
     def compile_model(self, model):
         optimizer_parameters = {
-            'optimizer': 'adam',
+            'optimizer': cfg['backend']['optimizer'],
             'loss': cfg['backend']['loss'],
             'metrics': ['accuracy'],
         }
         # If user specified custom optimizer, use it instead of the default one
         # we also need to deserialize optimizer as it was serialized during init
-        # if self.optimizer is not None:
-        #     optimizer_parameters['optimizer'] = tf.keras.optimizers.deserialize(self.optimizer)
-        # model.compile(**optimizer_parameters)
-        INIT_LR = 1e-3
-        EPOCHS = cfg['backend']['epochs']
-        opt = Adam(lr=INIT_LR, decay=INIT_LR / EPOCHS)
-        model.compile(loss="mse", optimizer=opt, metrics='accuracy')
+        if self.optimizer is not None:
+            optimizer_parameters['optimizer'] = tf.keras.optimizers.deserialize(self.optimizer)
+        model.compile(**optimizer_parameters)
 
     def create_layer(self, node):
         # Workaround to prevent Keras from throwing an exception ("All layer
