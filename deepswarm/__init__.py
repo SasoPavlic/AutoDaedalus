@@ -48,7 +48,7 @@ settings_file_path = Path(settings_directory, filename).with_suffix('.yaml')
 
 # If the file doesn't exist fallback to the default settings file
 if not settings_file_path.exists():
-    settings_file_path = Path(settings_directory, 'default').with_suffix('.yaml')
+    settings_file_path = Path(settings_directory, 'autoencoder').with_suffix('.yaml')
 
 # Read settings file
 with open(settings_file_path, 'r') as settings_file:

@@ -13,6 +13,7 @@ from tensorflow.keras.layers import *
 from tensorflow.keras.utils import *
 import numpy as np
 from . import cfg
+from deepswarm.log import Log
 
 
 class Dataset:
@@ -171,7 +172,7 @@ class TFKerasBackend(BaseBackend):
         layers.append((output_layer, node))
         # Get volume size before flattening data (we need it when building a decoder)
         self.volume_size = layers[-3][0].shape
-        print(f"Volume size: {self.volume_size}")
+        Log.info(f"Volume size: {self.volume_size}")
 
         # Return generated model
         model = tf.keras.Model(inputs=input_layer, outputs=output_layer, name='encoder')
@@ -213,11 +214,11 @@ class TFKerasBackend(BaseBackend):
 
         encoder_model = self.generate_encoder(autoencoder_path[0])
         self.encoder_model = encoder_model
-        print(encoder_model.summary())
+        Log.info(encoder_model.summary())
 
         decoder_model = self.generate_decoder(autoencoder_path[1])
         self.decoder_model = decoder_model
-        print(decoder_model.summary())
+        Log.info(decoder_model.summary())
 
         # Return generated model
         autoencoder_model = Model(input_layer, decoder_model(encoder_model(input_layer)), name="autoencoder")
@@ -361,6 +362,8 @@ class TFKerasBackend(BaseBackend):
             return tf.keras.activations.sigmoid
         if activation == "Softmax":
             return tf.keras.activations.softmax
+        if activation == "Tanh":
+            return tf.keras.activations.tanh
         raise Exception('Not handled activation: %s' % str(activation))
 
     def train_model(self, model, storage, epochs=cfg['backend']['epochs']):
@@ -369,9 +372,10 @@ class TFKerasBackend(BaseBackend):
         checkpoint_path = 'temp-model'
 
         # Setup training parameters
+        # Duo to nature of Autoencoder Output should be as close as possible to Input
         fit_parameters = {
             'x': self.dataset.x_train,
-            'y': self.dataset.y_train,
+            'y': self.dataset.x_train,
             'epochs': epochs,
             'batch_size': cfg['backend']['batch_size'],
             'callbacks': [self.tensorboard_callback],
@@ -453,7 +457,7 @@ class TFKerasBackend(BaseBackend):
     def evaluate_model(self, model):
         loss, accuracy = model.evaluate(
             x=self.dataset.x_test,
-            y=self.dataset.y_test,
+            y=self.dataset.x_test,
             verbose=cfg['backend']['verbose']
         )
         return (loss, accuracy)

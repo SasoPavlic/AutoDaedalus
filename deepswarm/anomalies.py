@@ -1,8 +1,16 @@
 import numpy as np
 from matplotlib import pyplot as plt
 from tensorflow.keras import backend as K
+from deepswarm.log import Log
+from . import data_config
 
-def find(model, x_test, cfg, storage):
+# Good tutorial https://www.pyimagesearch.com/2020/03/02/anomaly-detection-with-keras-tensorflow-and-deep-learning/
+def find(model, x_test, y_test, quantile=0.99,
+         manual_code=False,
+         valid_label=data_config['valid_label'],
+         anomaly_label=data_config['anomaly_label']):
+
+
     decoded = model.predict(x_test)
     errors = []
 
@@ -17,10 +25,23 @@ def find(model, x_test, cfg, storage):
     # compute the q-th quantile of the errors which serves as our
     # threshold to identify anomalies -- any data point that our model
     # reconstructed with > threshold error will be marked as an outlier
-    thresh = np.quantile(errors, cfg['anomaly']['quantile'])
+    thresh = np.quantile(errors, quantile)
     idxs = np.where(np.array(errors) >= thresh)[0]
-    print("[INFO] mse threshold: {}".format(thresh))
-    print("[INFO] {} outliers found".format(len(idxs)) + f" out of {len(errors)} instances")
+
+    response_msg_1 = f"[INFO] mse threshold: {thresh}"
+    response_msg_2 = f"[GOAL] Actual number of all anomalies in dataset: {sum(x in anomaly_label for x in y_test)}"
+    instaces_in_quantile = np.array(y_test)[idxs.astype(int)]
+    TP_anomalies = sum(x == anomaly_label for x in instaces_in_quantile)
+    response_msg_3 = f"[RESULT] Number of true positives anomalies found: {sum(TP_anomalies)} instances inside of quantile:{quantile}"
+
+    if manual_code:
+        print(response_msg_1)
+        print(response_msg_2)
+        print(response_msg_3)
+    else:
+        Log.info(response_msg_1)
+        Log.info(response_msg_2)
+        Log.info(response_msg_3)
 
     # initialize the outputs array
     outputs = None
@@ -46,6 +67,12 @@ def find(model, x_test, cfg, storage):
 
     # show the output visualization
     vol_size = K.int_shape(outputs)
-    plt.imshow(outputs.reshape(vol_size[0], vol_size[1]))
-    plt.title("(Anomaly detection) \nOrginal vs. recunstructed")
+    final_output = outputs.reshape(vol_size[0], vol_size[1])
+    plt.figure(figsize = (5,len(idxs)+5))
+    plt.imshow(final_output)
+    plt.title(f"(Anomaly detection)\n"
+              f"Model found: {len(idxs)} instances inside of quantile:{quantile}\n"
+              f"Number of true positives anomalies: {TP_anomalies}\n"
+              f"Valid label/s: {valid_label}\n"
+              f"Anomaly label/s: {anomaly_label}")
     return plt

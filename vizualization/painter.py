@@ -1,13 +1,20 @@
+import numpy
 import seaborn
 from tensorflow import keras
 from tensorflow.keras import backend as K
 import numpy as np
 from matplotlib import pyplot as plt
+from deepswarm.log import Log
 
 from deepswarm import cfg
 
+def unison_shuffled_copies(a, b):
+    assert len(a) == len(b)
+    p = numpy.random.permutation(len(a))
+    return a[p], b[p]
 
-def training_loss(history, cfg, epochs=cfg['backend']['epochs']):
+
+def training_loss(history, epochs=cfg['backend']['epochs']):
     # Loss
     N = np.arange(0, epochs)
     plt.style.use("ggplot")
@@ -23,7 +30,7 @@ def training_loss(history, cfg, epochs=cfg['backend']['epochs']):
     return plt
 
 
-def training_acc(history, cfg, epochs=cfg['backend']['epochs']):
+def training_acc(history, epochs=cfg['backend']['epochs']):
     # Accuracy
     N = np.arange(0, epochs)
     plt.style.use("ggplot")
@@ -40,7 +47,7 @@ def training_acc(history, cfg, epochs=cfg['backend']['epochs']):
     return plt
 
 
-def reconstructed_results(model, x_test, storage):
+def reconstructed_results(model, x_test):
     """Visualize on image predicted results and train data
     Args:
         model: model which represents neural network structure.
@@ -55,8 +62,9 @@ def reconstructed_results(model, x_test, storage):
     else:
         dims = (vol_size[1], vol_size[2])
 
-    n = 10
-    plt.figure(figsize=(20, 4))
+    (x_test, decoded_imgs) = unison_shuffled_copies(x_test, decoded_imgs)
+    n = 20
+    plt.figure(figsize=(40, 4))
     for i in range(1, n + 1):
         # Display original
         ax = plt.subplot(2, n, i)
@@ -75,7 +83,7 @@ def reconstructed_results(model, x_test, storage):
     return plt
 
 
-def MAE_loss(model, x_train, storage):
+def MAE_loss(model, x_train, manual_code=False):
     # Get train MAE loss.
     decoded = model.predict(x_train)
     errors = []
@@ -94,17 +102,41 @@ def MAE_loss(model, x_train, storage):
 
     # Get reconstruction loss threshold.
     threshold = np.max(errors)
-    print("Reconstruction error threshold: ", threshold)
+
+    if manual_code:
+        print(f"Reconstruction error threshold: {threshold}")
+    else:
+        Log.info(f"Reconstruction error threshold: {threshold}")
     return plt
 
 
-def encoded_image(model, x_test):
-    # https://stackoverflow.com/questions/51091106/correct-way-to-get-output-of-intermediate-layer-in-keras-model
-    layer_name = 'encoder'
-    intermediate_layer_model = keras.Model(inputs=model.input,
-                                     outputs=model.get_layer(layer_name).output)
-    intermediate_output = intermediate_layer_model.predict(x_test)
 
-    fig, ax = plt.subplots()
-    seaborn.heatmap([intermediate_output[0]])
+def encoded_image(autoencoder, encoder, x_test):
+    encoded_imgs = encoder.predict(x_test)
+    predicted = autoencoder.predict(x_test)
+
+    p = numpy.random.permutation(len(x_test))
+    (x_test, encoded_imgs, predicted) = (x_test[p], encoded_imgs[p], predicted[p])
+    # Display 40 images
+    plt.figure(figsize=(40, 4))
+    for i in range(20):
+        # display original images
+        ax = plt.subplot(3, 20, i + 1)
+        plt.imshow(x_test[i].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+
+        # display encoded images
+        ax = plt.subplot(3, 20, i + 1 + 20)
+        plt.imshow(encoded_imgs[i].reshape(4, 4))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
+        # display reconstructed images
+        ax = plt.subplot(3, 20, 2 * 20 + i + 1)
+        plt.imshow(predicted[i].reshape(28, 28))
+        plt.gray()
+        ax.get_xaxis().set_visible(False)
+        ax.get_yaxis().set_visible(False)
     return plt

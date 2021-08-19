@@ -16,18 +16,20 @@ contamination = data_config["contamination"]
 test_size = data_config["test_size"]
 random_state = data_config["random_state"]
 
-(x_train, x_test) = prepare_dataset(validLabel,
+
+(x_train, x_test, y_train, y_test) = prepare_dataset(validLabel,
                                     anomalyLabel,
                                     contamination,
                                     test_size,
+                                    True,
                                     random_state)
 
 # Create dataset object, which controls all the data
 normalized_dataset = Dataset(
     training_examples=x_train,
-    training_labels=x_train,
+    training_labels=y_train,
     testing_examples=x_test,
-    testing_labels=x_test
+    testing_labels=y_test
 )
 # Create backend responsible for training & validating
 backend = TFKerasBackend(dataset=normalized_dataset)
@@ -37,7 +39,7 @@ deepswarm = DeepSwarm(backend=backend)
 topology = deepswarm.find_topology()
 # Evaluate discovered topology
 deepswarm.evaluate_topology(topology)
-# Train topology for additional 30 epochs
-trained_topology = deepswarm.train_topology(topology, 30)
+# Train topology for additional 100 epochs
+trained_topology = deepswarm.train_topology(topology, 100)
 # Evaluate the final topology
 deepswarm.evaluate_topology(trained_topology)

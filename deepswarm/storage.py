@@ -78,6 +78,11 @@ class Storage:
         save_path = self.current_path / Storage.DIR["MODEL"] / model_name
         plot_model(model, to_file= save_path / plt_name, show_shapes=True, show_layer_names=True)
 
+    def save_partial_model(self, backend, path_hashes, model_name, model):
+        save_path = self.current_path / Storage.DIR["MODEL"] / path_hashes[-1] / model_name
+        backend.save_model(model, save_path)
+
+
     def save_model(self, backend, model, path_hashes, cost):
         """Saves the model and adds its information to the dictionaries.
 

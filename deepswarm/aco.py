@@ -264,33 +264,35 @@ class Ant:
 
         # Save model
         storage.save_model(backend, new_model, path_hashes, self.cost)
+        storage.save_partial_model(backend, path_hashes, "encoder_model", backend.get_encoder_model())
+        storage.save_partial_model(backend, path_hashes, "decoder_model", backend.get_decoder_model())
+
         storage.save_model_shape(path_hashes, 'encoder_shape.png', backend.get_encoder_model())
         storage.save_model_shape(path_hashes, 'decoder_shape.png', backend.get_decoder_model())
 
         # Display and save graphs
-        plt_loss = painter.training_loss(history, cfg, epochs=cfg['backend']['epochs'])
+        plt_loss = painter.training_loss(history, epochs=cfg['backend']['epochs'])
         storage.save_plot(path_hashes, 'plt_loss.png', plt_loss)
         plt_loss.show()
 
-        plt_acc = painter.training_acc(history, cfg, epochs=cfg['backend']['epochs'])
+        plt_acc = painter.training_acc(history, epochs=cfg['backend']['epochs'])
         storage.save_plot(path_hashes, 'plt_acc.png', plt_acc)
         plt_acc.show()
 
-        plt_recunstructed_results = painter.reconstructed_results(new_model, backend.dataset.x_test, storage)
+        plt_recunstructed_results = painter.reconstructed_results(new_model, backend.dataset.x_test)
         storage.save_plot(path_hashes, 'plt_recunstructed_results.png', plt_recunstructed_results)
         plt_recunstructed_results.show()
 
-        plt_MAE_loss = painter.MAE_loss(new_model, backend.dataset.x_train, storage)
+        plt_MAE_loss = painter.MAE_loss(new_model, backend.dataset.x_train)
         storage.save_plot(path_hashes, 'plt_MAE_loss.png', plt_MAE_loss)
         plt_MAE_loss.show()
 
-        # NOT used since keras is throwing an error: Graph disconnected
-        # plt_encoded_image = painter.encoded_image(new_model, backend.dataset.x_test)
-        # storage.save_plot(path_hashes, 'plt_encoded_image.png', plt_encoded_image)
-        # plt_encoded_image.show()
+        plt_encoded_image = painter.encoded_image(new_model,backend.get_encoder_model(), backend.dataset.x_test)
+        storage.save_plot(path_hashes, 'plt_encoded_image.png', plt_encoded_image)
+        plt_encoded_image.show()
 
         # Find anomalies in data
-        plt_anomalies = anomalies.find(new_model, backend.dataset.x_test, cfg, storage)
+        plt_anomalies = anomalies.find(new_model, backend.dataset.x_test, backend.dataset.y_test, cfg['anomaly']['quantile'])
         storage.save_plot(path_hashes, 'plt_anomalies.png', plt_anomalies)
         plt_anomalies.show()
 
