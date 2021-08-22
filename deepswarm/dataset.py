@@ -8,6 +8,36 @@ from deepswarm.log import Log
 from deepswarm.log import Log
 import matplotlib.pyplot as plt
 
+def build_validation_dataset(valid_label, anomaly_label):
+
+	((trainX, trainY), (testX, testY)) = tf.keras.datasets.mnist.load_data()
+
+	validIdxs = list()
+	for i in range(len(testY)):
+		if testY[i] in list(valid_label):
+			validIdxs.append(i)
+
+	anomalyIdxs = list()
+	for i in range(len(testY)):
+		if testY[i] in list(anomaly_label):
+			anomalyIdxs.append(i)
+
+	validImages = testX[validIdxs]
+	validImages_labels = testY[validIdxs]
+	anomalyImages = testX[anomalyIdxs]
+	anomalyImages_labels = testY[anomalyIdxs]
+
+	images = np.vstack([validImages, anomalyImages])
+	labels = list()
+	labels = list(validImages_labels) + list(anomalyImages_labels)
+
+	images = np.expand_dims(images, axis=-1)
+	images = images.astype("float32") / 255.0
+
+	testX = images
+	testY = labels
+
+	return (testX, testY)
 
 def build_unsupervised_dataset(data, labels, validLabel,
 	anomalyLabel, contamination, manual_code, seed=42):

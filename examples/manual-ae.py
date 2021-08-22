@@ -25,22 +25,21 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 # tensorboard --logdir ./logs/fit/
 
 # Training settings
-EPOCHS = 25
+EPOCHS = 3
 BATCH = 32
 
 # Contaminate dataset with anomalies (e.g. dataset with 99% of 1 digits and 1% of 3 digits)
-validLabel = [9]
-anomalyLabel = [0,7]
-contamination = 0.25
+validLabel = [1]
+anomalyLabel = [0]
+contamination = 0.05
 test_size = 0.2
 random_state = 42
 
-
 # Autoencoder model setup
 input_img = Input(shape=(28, 28, 1))
-encoded = Dense(64, activation='relu')(input_img)
+encoded = Dense(128, activation='relu')(input_img)
+encoded = Dense(64, activation='relu')(encoded)
 #encoded = Dense(64, activation='relu')(encoded)
-#encoded = Dense(32, activation='relu')(encoded)
 volumeSize = K.int_shape(encoded)
 flatten = Flatten()(encoded)
 flatten = Dense(16)(flatten)
@@ -49,8 +48,8 @@ encoder_model = tf.keras.Model(inputs=input_img, outputs=flatten, name='encoder'
 latentInputs = Input(shape=(16,))
 decoded = Dense(np.prod(volumeSize[1:]))(latentInputs)
 decoded = Reshape((volumeSize[1], volumeSize[2], volumeSize[3]))(decoded)
-#decoded = Dense(64, activation='relu')(decoded)
-#encoded = Dense(128, activation='relu')(encoded)
+decoded = Dense(128, activation='relu')(decoded)
+# encoded = Dense(784, activation='relu')(encoded)
 decoded = Dense(1, activation='sigmoid')(decoded)
 decoder_model = tf.keras.Model(inputs=latentInputs, outputs=decoded, name='decoder')
 
@@ -76,6 +75,9 @@ history = autoencoder.fit(x_train, x_train,
                 callbacks=[tensorboard_callback])
 
 autoencoder.save(filepath="../tests/manual_model")
+encoder_model.save(filepath="../tests/manual_model/encoder_model")
+decoder_model.save(filepath="../tests/manual_model/decoder_model")
+
 
 # Predicting results on test dataset
 decoded_imgs = autoencoder.predict(x_test)
@@ -112,6 +114,10 @@ save_plot('plt_encoded_image.png', plt_encoded_image)
 plt_encoded_image.show()
 
 # Find anomalies in data
-plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.995, True, validLabel, anomalyLabel)
+plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.99, True, validLabel, anomalyLabel)
 save_plot('plt_anomalies.png', plt_anomalies)
 plt_anomalies.show()
+
+# Evaluate model
+roc_curve = anomalies.calculate_roc_curve(autoencoder, x_test, y_test, True, validLabel, anomalyLabel)
+roc_curve.show()

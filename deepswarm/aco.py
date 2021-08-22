@@ -6,7 +6,8 @@ import random
 
 from tensorflow.python.keras.models import Model
 
-from . import cfg, left_cost_is_better
+from . import cfg, left_cost_is_better, data_config
+from .dataset import build_validation_dataset
 from .log import Log
 from .nodes import Node, NeighbourNode
 from vizualization import painter
@@ -292,9 +293,16 @@ class Ant:
         plt_encoded_image.show()
 
         # Find anomalies in data
+        validLabel = data_config["valid_label"]
+        anomalyLabel = data_config["anomaly_label"]
+        (x_test, y_test) = build_validation_dataset(validLabel, anomalyLabel)
         plt_anomalies = anomalies.find(new_model, backend.dataset.x_test, backend.dataset.y_test, cfg['anomaly']['quantile'])
         storage.save_plot(path_hashes, 'plt_anomalies.png', plt_anomalies)
         plt_anomalies.show()
+
+        # Evaluate model
+        roc_curve = anomalies.calculate_roc_curve(new_model, x_test, y_test, False, validLabel, anomalyLabel)
+        roc_curve.show()
 
 
 

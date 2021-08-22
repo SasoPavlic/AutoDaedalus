@@ -1,7 +1,7 @@
 DataConfig:
     valid_label: [1,2,3,4,5,6,7,8,9]
     anomaly_label: [0]
-    contamination: 0.05
+    contamination: 0.01
     test_size: 0.2
     random_state: 42
 
@@ -9,8 +9,8 @@ DeepSwarm:
     save_folder:
     metrics: accuracy
     #Autoencoder depth without middle latent space
-    max_depth: 5
-    min_depth: 1
+    max_depth: 4
+    min_depth: 3
     reuse_patience: 1
 
     aco:
@@ -25,10 +25,10 @@ DeepSwarm:
 
     # Finding the best balance between TP anomalies and FN instances with quantile size is all the magic for success
     anomaly:
-        quantile: 0.995
+        quantile: 0.98
 
     backend:
-        epochs: 75
+        epochs: 5
         batch_size: 32
         patience: 5
         verbose: 1
