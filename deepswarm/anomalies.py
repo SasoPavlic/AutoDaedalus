@@ -1,5 +1,4 @@
 import numpy as np
-from matplotlib import pyplot as plt
 from tensorflow.keras import backend as K
 from deepswarm.log import Log
 from . import data_config
@@ -67,19 +66,16 @@ def calculate_roc_curve(model, x_test, y_test,
     plt.style.use('seaborn')
 
     # plot roc curves
-
     plt.plot(FPR_array, TPR_array, linestyle='--', color='green', label='Autoencoder')
     plt.plot(p_fpr, p_tpr, linestyle='--', color='blue')
-    # title
+
     plt.title(f'ROC curve - AUC: {round(np.trapz(TPR_array, FPR_array), 2)}')
     # x label
     plt.xlabel('False Positive Rate')
     # y label
     plt.ylabel('True Positive rate')
-
     plt.legend(loc='best')
-    # plt.savefig('ROC', dpi=300)
-    plt.show()
+
     auc = np.trapz(TPR_array, FPR_array)
 
     if manual_code:
@@ -95,6 +91,7 @@ def find(model, x_test, y_test, quantile=0.99,
          manual_code=False,
          valid_label=data_config['valid_label'],
          anomaly_label=data_config['anomaly_label']):
+
     decoded = model.predict(x_test)
     errors = []
 

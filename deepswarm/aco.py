@@ -302,6 +302,7 @@ class Ant:
 
         # Evaluate model
         roc_curve = anomalies.calculate_roc_curve(new_model, x_test, y_test, False, validLabel, anomalyLabel)
+        storage.save_plot(path_hashes, 'roc_curve.png', roc_curve)
         roc_curve.show()
 
 

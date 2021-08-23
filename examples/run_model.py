@@ -11,8 +11,12 @@ from vizualization.painter import reconstructed_results
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
+
+
 #path = '/home/spartan/PycharmProjects/DeepSwarm/saves/2021-08-21-00-13-37_multi_label/best_anomaly_detector_depth_5/4eeb69229bf7051a34c8526dc1fe77e2a6804da917bd989d179caf0e924b8d0e'
-path = '/home/spartan/PycharmProjects/DeepSwarm/saves/2021-08-20-09-47-39_single_label_1V_0A/models/6917d7c05d4c5590cf3a537ee6ce1333019d61a5a3b1d98ec1117b1074e47ecd'
+#path = '/home/spartan/PycharmProjects/DeepSwarm/saves/2021-08-20-09-47-39_single_label_1V_0A/models/6917d7c05d4c5590cf3a537ee6ce1333019d61a5a3b1d98ec1117b1074e47ecd'
+
+path = '/home/spartan/PycharmProjects/DeepSwarm/saves/2021-08-20-09-47-39_single_label_1V_0A/best_anomaly_detector_depth_5/40764d8149ddf46e4f8b6dadfa11b57709d6c7da8643f8bbc2c9ffc6b87a90fc'
 
 autoencoder_path = path + '/'
 encoder_path = path +'/encoder_model'
@@ -57,23 +61,28 @@ images = images.astype("float32") / 255.0
 testX = images
 testY = labels
 
-predicted = autoencoder.predict(testX)
-predicted_labels = labels
-
-
-# evaluate the model
-loss, accuracy = autoencoder.evaluate(testX, predicted, verbose=0)
-
 plt_recunstructed_results = reconstructed_results(autoencoder,testX)
+plt_recunstructed_results.savefig(f'{path}/plt_recunstructed_results.png')
 plt_recunstructed_results.show()
 
 plt_encoded_image = painter.encoded_image(autoencoder, encoder, testX)
+plt_encoded_image.savefig(f'{path}/plt_encoded_image.png')
 plt_encoded_image.show()
 
 # Find anomalies in data
-plt_anomalies = anomalies.find(autoencoder, testX, testY, 0.95, True, valid_label, anomaly_label)
+plt_anomalies = anomalies.find(autoencoder, testX, testY, 0.995, True, valid_label, anomaly_label)
+plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(995)}.png')
+plt_anomalies.show()
+
+plt_anomalies = anomalies.find(autoencoder, testX, testY, 0.98, True, valid_label, anomaly_label)
+plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(98)}.png')
+plt_anomalies.show()
+
+plt_anomalies = anomalies.find(autoencoder, testX, testY, 0.9, True, valid_label, anomaly_label)
+plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(9)}.png')
 plt_anomalies.show()
 
 # Evaluate model
 roc_curve = anomalies.calculate_roc_curve(autoencoder, testX, testY, True)
+roc_curve.savefig(f'{path}/roc_curve.png', dpi=300)
 roc_curve.show()
