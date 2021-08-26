@@ -2,3 +2,4 @@ colorama
 pyyaml
 scikit-learn
 matplotlib
+numpy

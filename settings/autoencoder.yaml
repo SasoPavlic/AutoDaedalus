@@ -1,70 +1,68 @@
 DataConfig:
     valid_label: [1,2,3,4,5,6,7,8,9]
     anomaly_label: [0]
-    contamination: 0.01
-    test_size: 0.2
-    random_state: 42
+    contamination: 0.01 # Amount of anomalies in dataset in %
+    test_size: 0.2 # Ratio between train and test dataset size
+    random_state: 42 # State of the random number generator
 
-DeepSwarm:
+DeepSwarm: # DeepSwarm object responsible for providing a user-facing interface
     save_folder:
-    metrics: accuracy
-    #Autoencoder depth without middle latent space
-    max_depth: 4
-    min_depth: 3
-    reuse_patience: 1
+    metrics: accuracy # Metrics to evaluate the models
+    max_depth: 10 # Maximum and a minimum depth of hidden layers
+    min_depth: 1 # on one side of the Autoencoder
+    reuse_patience: 1 # Number of times weight can be reused
 
-    aco:
+    aco: # Ant colony optimization object
         pheromone:
-            start: 0.1
-            decay: 0.1
-            evaporation: 0.1
-            verbose: 1
-        greediness: 0.50
-        ant_count: 16
-        latent_dim: 16 # latent space (center of Autoencoder)
+            start: 0.1 # Starting pheromone value
+            decay: 0.1 # Local pheromone decay
+            evaporation: 0.1 # Global pheromone decay
+            verbose: 1 # Logging components
+        greediness: 0.50 # Greediness of ants
+        ant_count: 10 # Maximum amount of ants (models)
+        latent_dim: 16 # Dimension of compressed space in Autoencoder
 
-    # Finding the best balance between TP anomalies and FN instances with quantile size is all the magic for success
     anomaly:
-        quantile: 0.98
+        quantile: 0.98 # Instance out of this quantile are anomalies
 
     backend:
-        epochs: 5
-        batch_size: 32
-        patience: 5
-        verbose: 1
-        optimizer: adam
-        loss: binary_crossentropy # Output at the end is in binary
+        epochs: 75 # Number of epochs per ant (model)
+        batch_size: 32 # Number of batches in epoch per ant (model)
+        patience: 5 # Early stopping during the training
+        verbose: 1 # Logging components
+        optimizer: adam # Optimizer for training
+        loss: binary_crossentropy # Loss function for training
 
-Nodes:
+Nodes: # Layers types used when building the topology
 
-    InputNode:
-        type: Input
+    InputNode: # First layer in encoder model
+        type: Input # Type of layer in Keras
         attributes:
-            shape: [!!python/tuple [28, 28, 1]]
+            shape: [!!python/tuple [28, 28, 1]]# Shape of input
         transitions:
-            DenseNode: 1.0
+            DenseNode: 1.0 # Transition possibility for next layer
 
-    InputDecoderNode:
+    InputDecoderNode: # First layer in decoder model
         type: Input
         attributes:
             shape: [ !!python/tuple [ 14 ] ]
         transitions:
             DenseNode: 1.0
 
-    FlattenNode:
+    FlattenNode: # Flatten layer before latent space in Autoencoder
         type: Flatten
         attributes: { }
         transitions:
             DenseNode: 1.0
 
-    ReShapeNode:
+    ReShapeNode: # Layer used when decoding back from latent space
         type: Reshape
         attributes:
             target_shape: [ !!python/tuple [ 7, 7, 1 ] ]
         transitions:
             DenseNode: 1.0
 
-    DenseNode:
+    DenseNode: # Hidden layer in autoencoder
         type: Dense
         attributes:
             output_size: [128, 64, 32, 16, 8, 4, 2]
@@ -72,7 +70,7 @@ Nodes:
         transitions:
             DenseNode: 1.0
 
-    OutputNode:
+    OutputNode: # Final output layer in decoder model
         type: Output
         attributes:
             output_size: [1]
