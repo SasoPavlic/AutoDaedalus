@@ -1,4 +1,6 @@
 import datetime
+import sys
+
 from tensorflow import keras
 from tensorflow.keras.layers import *
 import tensorflow as tf
@@ -10,7 +12,6 @@ from deepswarm.dataset import prepare_dataset
 from vizualization import painter
 
 path = '../tests/manual_model/'
-
 # Command to setup GPU card
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
@@ -26,7 +27,7 @@ EPOCHS = 75
 BATCH = 32
 
 # Contaminate dataset with anomalies (e.g. dataset with 99% of 1 digits and 1% of 3 digits)
-validLabel = [1,2,3,4,5,6,7,8,9]
+validLabel = [1]
 anomalyLabel = [0]
 contamination = 0.01
 test_size = 0.2
@@ -41,17 +42,19 @@ encoded = Dense(16, activation='relu')(encoded)
 encoded = Dense(4, activation='relu')(encoded)
 volumeSize = K.int_shape(encoded)
 flatten = Flatten()(encoded)
-flatten = Dense(16)(flatten)
+flatten = Dense(16, name='Latent_space')(flatten)
 encoder_model = tf.keras.Model(inputs=input_img, outputs=flatten, name='encoder')
 
 latentInputs = Input(shape=(16,))
 decoded = Dense(np.prod(volumeSize[1:]))(latentInputs)
 decoded = Reshape((volumeSize[1], volumeSize[2], volumeSize[3]))(decoded)
-decoded = Dense(32, activation='relu')(decoded)
+decoded = Dense(4, activation='relu')(decoded)
 decoded = Dense(16, activation='relu')(decoded)
+decoded = Dense(32, activation='relu')(decoded)
 decoded = Dense(64, activation='relu')(decoded)
-encoded = Dense(128, activation='relu')(encoded)
-decoded = Dense(1, activation='sigmoid')(decoded)
+decoded = Dense(128, activation='relu')(decoded)
+
+decoded = Dense(1, activation='sigmoid', name='output')(decoded)
 decoder_model = tf.keras.Model(inputs=latentInputs, outputs=decoded, name='decoder')
 
 autoencoder = keras.Model(input_img, decoder_model(encoder_model(input_img)),name="autoencoder")
@@ -85,7 +88,7 @@ decoded_imgs = autoencoder.predict(x_test)
 score, acc, *all_metrices = autoencoder.evaluate(x_test, x_test, batch_size=BATCH)
 
 test= K.int_shape(x_test)
-print()
+sys.stdout = open(path + '/run_log.txt', 'w')
 print('Score: %1.4f' % score)
 print('Evaluation Accuracy: %1.2f%%' % (acc*100))
 
@@ -115,19 +118,27 @@ plt_encoded_image.savefig(f'{path}/plt_encoded_image.png')
 plt_encoded_image.show()
 
 # Find anomalies in data
+print(f"=====================================")
+print(f"Finding anomalies in quantile: 0.995")
 plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.995, True, validLabel, anomalyLabel)
 plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(995)}.png')
 plt_anomalies.show()
 
+print(f"=====================================")
+print(f"Finding anomalies in quantile: 0.98")
 plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.98, True, validLabel, anomalyLabel)
 plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(98)}.png')
 plt_anomalies.show()
 
-plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.97, True, validLabel, anomalyLabel)
-plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(97)}.png')
+print(f"=====================================")
+print(f"Finding anomalies in quantile: 0.9")
+plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.9, True, validLabel, anomalyLabel)
+plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(9)}.png')
 plt_anomalies.show()
 
 # Evaluate model
 roc_curve = anomalies.calculate_roc_curve(autoencoder, x_test, y_test, True)
 roc_curve.savefig(f'{path}/roc_curve.png', dpi=300)
 roc_curve.show()
+
+sys.stdout.close()

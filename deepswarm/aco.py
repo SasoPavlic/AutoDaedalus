@@ -300,6 +300,26 @@ class Ant:
         storage.save_plot(path_hashes, 'plt_anomalies.png', plt_anomalies)
         plt_anomalies.show()
 
+        # Find anomalies in data
+        autoencoder = new_model
+        print(f"=====================================")
+        print(f"Finding anomalies in quantile: 0.995")
+        plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.995, True, validLabel, anomalyLabel)
+        storage.save_plot(path_hashes, f'plt_anomalies_0{str(995)}.png', plt_anomalies)
+        plt_anomalies.show()
+
+        print(f"=====================================")
+        print(f"Finding anomalies in quantile: 0.98")
+        plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.98, True, validLabel, anomalyLabel)
+        storage.save_plot(path_hashes, f'plt_anomalies_0{str(98)}.png', plt_anomalies)
+        plt_anomalies.show()
+
+        print(f"=====================================")
+        print(f"Finding anomalies in quantile: 0.9")
+        plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.9, True, validLabel, anomalyLabel)
+        storage.save_plot(path_hashes, f'plt_anomalies_0{str(9)}.png', plt_anomalies)
+        plt_anomalies.show()
+
         # Evaluate model
         roc_curve = anomalies.calculate_roc_curve(new_model, x_test, y_test, False, validLabel, anomalyLabel)
         storage.save_plot(path_hashes, 'roc_curve.png', roc_curve)
@@ -336,7 +356,7 @@ class Graph:
         self.input_decoder_node = self.get_node(Node.create_using_name('InputDecoderNode'), current_depth)
         if self.current_depth == 0:
             self.increase_depth()
-        self.latent_dim = cfg['aco']['latent_dim']
+        self.latent_dim = 16
 
     def get_node(self, node, depth):
         """Tries to retrieve a given node from the graph. If the node does not
@@ -384,10 +404,9 @@ class Graph:
 
 
         path.append(self.get_node(Node.create_using_type('Flatten'), len(path)))
-        dense_layer = self.get_node(Node.create_using_type('Dense'), len(path))
-        # Specify latent dimension
-        dense_layer.output_size = self.latent_dim
-        path.append(dense_layer)
+        latent_space_node = self.get_node(Node.create_using_type('LatentSpace'), len(path))
+        self.latent_dim = latent_space_node.output_size
+        path.append(latent_space_node)
 
         return path
 

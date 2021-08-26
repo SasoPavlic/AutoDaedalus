@@ -321,6 +321,13 @@ class TFKerasBackend(BaseBackend):
             })
             return tf.keras.layers.Dense(**parameters)
 
+        if node.type == 'LatentSpace':
+            parameters.update({
+                'units': node.output_size,
+                'name': 'Latent_space'
+            })
+            return tf.keras.layers.Dense(**parameters)
+
         if node.type == 'Dropout':
             parameters.update({
                 'rate': node.rate,

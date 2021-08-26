@@ -8,7 +8,7 @@ DataConfig:
 DeepSwarm: # DeepSwarm object responsible for providing a user-facing interface
     save_folder:
     metrics: accuracy # Metrics to evaluate the models
-    max_depth: 10 # Maximum and a minimum depth of hidden layers
+    max_depth: 5 # Maximum and a minimum depth of hidden layers
     min_depth: 1 # on one side of the Autoencoder
     reuse_patience: 1 # Number of times weight can be reused
 
@@ -20,13 +20,12 @@ DeepSwarm: # DeepSwarm object responsible for providing a user-facing interface
             verbose: 1 # Logging components
         greediness: 0.50 # Greediness of ants
         ant_count: 10 # Maximum amount of ants (models)
-        latent_dim: 16 # Dimension of compressed space in Autoencoder
 
     anomaly:
         quantile: 0.98 # Instance out of this quantile are anomalies
 
     backend:
-        epochs: 75 # Number of epochs per ant (model)
+        epochs: 20 # Number of epochs per ant (model)
         batch_size: 32 # Number of batches in epoch per ant (model)
         patience: 5 # Early stopping during the training
         verbose: 1 # Logging components
@@ -67,6 +66,65 @@ Nodes: # Layers types used when building the topology
         attributes:
             output_size: [128, 64, 32, 16, 8, 4, 2]
             activation: [ReLU, LeakyReLU,Tanh]
+        transitions:
+            DenseNode: 0.2
+            DenseNode2: 0.3
+            DenseNode3: 0.1
+            DenseNode4: 0.1
+            DenseNode5: 0.3
+
+    DenseNode2: # Hidden layer in autoencoder
+        type: Dense
+        attributes:
+            output_size: [128, 2]
+            activation: [ReLU, LeakyReLU,Tanh]
+        transitions:
+            DenseNode: 0.2
+            DenseNode2: 0.2
+            DenseNode3: 0.2
+            DenseNode4: 0.2
+            DenseNode5: 0.2
+
+    DenseNode3: # Hidden layer in autoencoder
+        type: Dense
+        attributes:
+            output_size: [ 32, 16, 8, 4]
+            activation: [ReLU, LeakyReLU]
+        transitions:
+            DenseNode: 0.1
+            DenseNode2: 0.1
+            DenseNode3: 0.4
+            DenseNode4: 0.2
+            DenseNode5: 0.2
+
+    DenseNode4: # Hidden layer in autoencoder
+        type: Dense
+        attributes:
+            output_size: [128]
+            activation: [ReLU, LeakyReLU,Tanh]
+        transitions:
+            DenseNode: 0.4
+            DenseNode2: 0.1
+            DenseNode3: 0.1
+            DenseNode4: 0.1
+            DenseNode5: 0.3
+
+    DenseNode5: # Hidden layer in autoencoder
+        type: Dense
+        attributes:
+            output_size: [2]
+            activation: [ReLU, LeakyReLU,Tanh]
+        transitions:
+            DenseNode: 0.2
+            DenseNode2: 0.1
+            DenseNode3: 0.3
+            DenseNode4: 0.3
+            DenseNode5: 0.2
+
+    LatentSpaceNode: # Compressed representation of data in autoencoder
+        type: LatentSpace
+        attributes:
+            output_size: [16] # Dimension of compressed space in Autoencoder
         transitions:
             DenseNode: 1.0
 

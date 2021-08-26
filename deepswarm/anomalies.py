@@ -1,9 +1,10 @@
 import numpy as np
+import sklearn.metrics
 from tensorflow.keras import backend as K
 from deepswarm.log import Log
 from . import data_config
 import matplotlib.pyplot as plt
-from sklearn.metrics import roc_curve, roc_auc_score
+from sklearn.metrics import roc_curve
 
 
 def calculate_confusion_matrix(y_test, valid_label, anomaly_label, idxs):
@@ -22,7 +23,7 @@ def evaluate_anomalies(TP, FN, FP, TN):
     recall = (TP / (TP + FN))
     precision = ((TP / (TP + FP)))
     F1 = 2 * ((precision * recall) / (precision + recall))
-    return (recall, precision, F1)
+    return (round(recall, 3), round(precision, 3), round(F1, 3))
 
 
 
@@ -61,7 +62,8 @@ def calculate_roc_curve(model, x_test, y_test,
 
     # https://www.analyticsvidhya.com/blog/2020/06/auc-roc-curve-machine-learning/
     random_probs = [0 for i in range(len(y_test))]
-    p_fpr, p_tpr, _ = roc_curve(y_test, random_probs, pos_label=1)
+    p_fpr, p_tpr, thresholds = roc_curve(y_test, random_probs, pos_label=1)
+
     # This is the ROC curve
     plt.style.use('seaborn')
 
@@ -69,19 +71,21 @@ def calculate_roc_curve(model, x_test, y_test,
     plt.plot(FPR_array, TPR_array, linestyle='--', color='green', label='Autoencoder')
     plt.plot(p_fpr, p_tpr, linestyle='--', color='blue')
 
-    plt.title(f'ROC curve - AUC: {round(np.trapz(TPR_array, FPR_array), 2)}')
+    plt.title(f'ROC curve - AUC: {round(np.trapz(TPR_array, FPR_array), 3)}')
     # x label
     plt.xlabel('False Positive Rate')
     # y label
     plt.ylabel('True Positive rate')
     plt.legend(loc='best')
 
-    auc = np.trapz(TPR_array, FPR_array)
+    auc = round(np.trapz(TPR_array, FPR_array), 3)
 
     if manual_code:
-        print(f"AUC Score: {auc}")
+        print(f"=====================================")
+        print(f"Model AUC score: {auc}")
     else:
-        Log.info(f"AUC Score: {auc}")
+        print(f"=====================================")
+        Log.info(f"Model AUC score: {auc}")
     return plt
 
 
@@ -148,8 +152,12 @@ def find(model, x_test, y_test, quantile=0.99,
     # initialize the outputs array
     outputs = None
 
+    shuffler = np.random.permutation(len(idxs))
+    idxs = idxs[shuffler]
+
     # loop over the indexes of images with a high mean squared error term
-    for i in idxs:
+    # maximum allowed size of plot is limited, that is why we display only 150 images
+    for i in idxs[:500]:
         # grab the original image and reconstructed image
         original = (x_test[i])
         recon = (decoded[i])
@@ -171,7 +179,7 @@ def find(model, x_test, y_test, quantile=0.99,
 
     vol_size = K.int_shape(outputs)
     final_output = outputs.reshape(vol_size[0], vol_size[1])
-    plt.figure(figsize=(5, len(idxs) + 5))
+    plt.figure(figsize=(10, 100))
     plt.imshow(final_output)
     plt.title(f"(Anomaly detection)\n"
               f"Model found: {len(idxs)} instances inside of quantile:{quantile}\n"
