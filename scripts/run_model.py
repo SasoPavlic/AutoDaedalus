@@ -15,12 +15,12 @@ physical_devices = tf.config.experimental.list_physical_devices('GPU')
 tf.config.experimental.set_memory_growth(physical_devices[0], True)
 
 # Autoencoder's location on disk
-autoencoder_path = '../specify/path/on/disk'
+autoencoder_path = '/home/spartan/PycharmProjects/DeepSwarm/saves/2021-08-21-00-13-37_multi_label/best_anomaly_detector_depth_5/4eeb69229bf7051a34c8526dc1fe77e2a6804da917bd989d179caf0e924b8d0e/'
 
 # Encoder's location on disk (used for function: painter.encoded_image())
-encoder_path = path +'/encoder_model'
+encoder_path = autoencoder_path +'/encoder_model'
 
-sys.stdout = open(path + '/run_log.txt', 'w')
+sys.stdout = open(autoencoder_path + '/run_log.txt', 'w')
 
 # Lists of valid labels and anomalies
 valid_label = [1,2,3,4,5,6,7,8,9]
@@ -63,35 +63,35 @@ testX = images
 testY = labels
 
 plt_recunstructed_results = reconstructed_results(autoencoder,testX)
-plt_recunstructed_results.savefig(f'{path}/plt_recunstructed_results.png')
+plt_recunstructed_results.savefig(f'{encoder_path}/plt_recunstructed_results.png')
 plt_recunstructed_results.show()
 
 plt_encoded_image = painter.encoded_image(autoencoder, encoder, testX)
-plt_encoded_image.savefig(f'{path}/plt_encoded_image.png')
+plt_encoded_image.savefig(f'{autoencoder_path}/plt_encoded_image.png')
 plt_encoded_image.show()
 
 # Find anomalies in data (multiple quantiles)
 print(f"=====================================")
 print(f"Finding anomalies in quantile: 0.995")
 plt_anomalies = anomalies.find(autoencoder, testX, testY, 0.995, True, valid_label, anomaly_label)
-plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(995)}.png')
+plt_anomalies.savefig(f'{autoencoder_path}/plt_anomalies_0{str(995)}.png')
 plt_anomalies.show()
 
 print(f"=====================================")
 print(f"Finding anomalies in quantile: 0.98")
 plt_anomalies = anomalies.find(autoencoder, testX, testY, 0.98, True, valid_label, anomaly_label)
-plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(98)}.png')
+plt_anomalies.savefig(f'{autoencoder_path}/plt_anomalies_0{str(98)}.png')
 plt_anomalies.show()
 
 print(f"=====================================")
 print(f"Finding anomalies in quantile: 0.9")
 plt_anomalies = anomalies.find(autoencoder, testX, testY, 0.9, True, valid_label, anomaly_label)
-plt_anomalies.savefig(f'{path}/plt_anomalies_0{str(9)}.png')
+plt_anomalies.savefig(f'{autoencoder_path}/plt_anomalies_0{str(9)}.png')
 plt_anomalies.show()
 
 # Evaluate model
 roc_curve = anomalies.calculate_roc_curve(autoencoder, testX, testY, True)
-roc_curve.savefig(f'{path}/roc_curve.png', dpi=300)
+roc_curve.savefig(f'{autoencoder_path}/roc_curve.png', dpi=300)
 roc_curve.show()
 
 sys.stdout.close()
