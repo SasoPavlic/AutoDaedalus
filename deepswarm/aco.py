@@ -13,6 +13,7 @@ from .nodes import Node, NeighbourNode
 from vizualization import painter
 from deepswarm import anomalies
 
+
 class ACO:
     """Class responsible for performing Ant Colony Optimization."""
 
@@ -34,7 +35,6 @@ class ACO:
             Log.header("STARTING ACO SEARCH", type="GREEN")
             # Generate Autoencoder graph
             self.best_ant = Ant(self.graph.generate_autoencoder_path(self.random_select))
-            # TODO (Speed improvements 1) remove when debugging graph.generate_path
             self.best_ant.evaluate(self.backend, self.storage)
             Log.info(self.best_ant)
         else:
@@ -79,7 +79,6 @@ class ACO:
             Log.header("GENERATING ANT %i" % (ant_number + 1))
             ant = Ant(self.graph.generate_autoencoder_path(self.aco_select))
             # Evaluate how good is the new path
-            # TODO (Speed improvements 2) remove when debugging graph.generate_path
             ant.evaluate(self.backend, self.storage)
             ants.append(ant)
             Log.info(ant)
@@ -246,7 +245,8 @@ class Ant:
 
         # Disabled since we can't use reuse model the same way as Conv-NN.
         # Check if the model already exists if yes, then just re-use it
-        existing_model, existing_model_hash = (None, None)#storage.load_model(backend, path_hashes, self.encoder + self.decoder)
+        existing_model, existing_model_hash = (
+        None, None)  # storage.load_model(backend, path_hashes, self.encoder + self.decoder)
         if existing_model is None:
             # Generate model
             new_model = backend.generate_model((self.encoder, self.decoder))
@@ -288,7 +288,7 @@ class Ant:
         storage.save_plot(path_hashes, 'plt_MAE_loss.png', plt_MAE_loss)
         plt_MAE_loss.show()
 
-        plt_encoded_image = painter.encoded_image(new_model,backend.get_encoder_model(), backend.dataset.x_test)
+        plt_encoded_image = painter.encoded_image(new_model, backend.get_encoder_model(), backend.dataset.x_test)
         storage.save_plot(path_hashes, 'plt_encoded_image.png', plt_encoded_image)
         plt_encoded_image.show()
 
@@ -296,7 +296,8 @@ class Ant:
         validLabel = data_config["valid_label"]
         anomalyLabel = data_config["anomaly_label"]
         (x_test, y_test) = build_validation_dataset(validLabel, anomalyLabel)
-        plt_anomalies = anomalies.find(new_model, backend.dataset.x_test, backend.dataset.y_test, cfg['anomaly']['quantile'])
+        plt_anomalies = anomalies.find(new_model, backend.dataset.x_test, backend.dataset.y_test,
+                                       cfg['anomaly']['quantile'])
         storage.save_plot(path_hashes, 'plt_anomalies.png', plt_anomalies)
         plt_anomalies.show()
 
@@ -324,8 +325,6 @@ class Ant:
         roc_curve = anomalies.calculate_roc_curve(new_model, x_test, y_test, False, validLabel, anomalyLabel)
         storage.save_plot(path_hashes, 'roc_curve.png', roc_curve)
         roc_curve.show()
-
-
 
     @property
     def cost(self):
@@ -380,7 +379,6 @@ class Graph:
 
         self.current_depth += 1
 
-    #region Deep Autoencoder
     def generate_encoder_path(self, select_rule):
         """Generates encoder path through the graph based on given selection rule.
         Args:
@@ -401,7 +399,6 @@ class Graph:
             current_node = select_rule(current_node.neighbours)
             # Add only the copy of the node, so that original stays unmodified
             path.append(current_node.create_deepcopy())
-
 
         path.append(self.get_node(Node.create_using_type('Flatten'), len(path)))
         latent_space_node = self.get_node(Node.create_using_type('LatentSpace'), len(path))
@@ -441,46 +438,6 @@ class Graph:
 
         return path
 
-    #endregion Convolutional Autoencoder
-
-    #region Deep Autoencoder
-    def generate_deep_encoder_path(self, select_rule):
-        current_node = self.input_node
-        path = [current_node.create_deepcopy()]
-        for depth in range(self.current_depth):
-            # If the node doesn't have any neighbours stop expanding the path
-            if not self.has_neighbours(current_node, depth):
-                break
-
-            # Select node using given rule
-            current_node = select_rule(current_node.neighbours)
-            # Add only the copy of the node, so that original stays unmodified
-            path.append(current_node.create_deepcopy())
-
-        completed_path = path
-        return completed_path
-
-    def generate_deep_decoder_path(self, select_rule):
-        current_node = self.input_decoder_node
-        current_node.shape = self.latent_dim
-        path = [current_node.create_deepcopy()]
-
-        for depth in range(self.current_depth):
-            # If the node doesn't have any neighbours stop expanding the path
-            if not self.has_neighbours(current_node, depth):
-                break
-
-            # Select node using given rule
-            current_node = select_rule(current_node.neighbours)
-            # Add only the copy of the node, so that original stays unmodified
-            path.append(current_node.create_deepcopy())
-
-        path.append(self.get_node(Node.create_using_type('Output'), len(path)))
-        completed_path = path
-        return completed_path
-
-    #endregion Deep Autoencoder
-
     def generate_autoencoder_path(self, select_rule):
         """Generates encoder and decoder
 
@@ -497,7 +454,6 @@ class Graph:
         autoencoder = (encoder, decoder)
 
         return autoencoder
-
 
     def generate_path(self, select_rule):
         """Generates path through the graph based on given selection rule.

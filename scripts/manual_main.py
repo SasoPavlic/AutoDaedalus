@@ -1,6 +1,7 @@
+# This script is used to build manually autoencoder model and train, test it on dataset
+
 import datetime
 import sys
-
 from tensorflow import keras
 from tensorflow.keras.layers import *
 import tensorflow as tf
@@ -11,6 +12,7 @@ from deepswarm import anomalies
 from deepswarm.dataset import prepare_dataset
 from vizualization import painter
 
+# Location on disk, where you want to save a model and its infographics
 path = '../tests/manual_model/'
 # Command to setup GPU card
 physical_devices = tf.config.experimental.list_physical_devices('GPU')
@@ -26,7 +28,7 @@ tensorboard_callback = tf.keras.callbacks.TensorBoard(log_dir=log_dir, histogram
 EPOCHS = 75
 BATCH = 32
 
-# Contaminate dataset with anomalies (e.g. dataset with 99% of 1 digits and 1% of 3 digits)
+# Contaminate dataset with anomalies (e.g. dataset with 99% of 1 digits and 1% of 0 digits)
 validLabel = [1]
 anomalyLabel = [0]
 contamination = 0.01
@@ -117,7 +119,7 @@ plt_encoded_image = painter.encoded_image(autoencoder, encoder_model, x_test)
 plt_encoded_image.savefig(f'{path}/plt_encoded_image.png')
 plt_encoded_image.show()
 
-# Find anomalies in data
+# Find anomalies in data (multiple quantiles)
 print(f"=====================================")
 print(f"Finding anomalies in quantile: 0.995")
 plt_anomalies = anomalies.find(autoencoder, x_test, y_test, 0.995, True, validLabel, anomalyLabel)

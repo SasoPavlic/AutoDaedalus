@@ -341,21 +341,6 @@ class TFKerasBackend(BaseBackend):
             })
             return tf.keras.layers.Dense(**parameters)
 
-        # TODO remove if conv-Autoencider will not be used
-        if node.type == 'Output':
-            parameters.update({
-                'filters': 1,
-                'kernel_size': node.kernel_size,
-                'padding': 'same',
-                'data_format': self.data_format,
-                'activation': self.map_activation(node.activation)
-            })
-            # TODO make dynamic layer (when shape is different)
-            # Example of problematic NN
-            # InputNode,Conv2DNode,Pool2DNode,FlattenNode,DenseNode,ReShapeNode,Conv2DTransposeNode,BatchNormalizationNode,Conv2DNode,Pool2DNode,OutputNode,
-            #return tf.keras.layers.Conv2DTranspose(**parameters)
-            return Conv2DTranspose(1, (3, 3), strides=4, activation='sigmoid', padding='same')
-
         raise Exception('Not handled node type: %s' % str(node))
 
     def map_activation(self, activation):
@@ -406,7 +391,6 @@ class TFKerasBackend(BaseBackend):
         return checkpoint_model if checkpoint_model is not None else (model,history)
 
     def fully_train_model(self, model, epochs, augment, storage):
-        # TODO remove (no longer used)
         # Setup validation data
         if self.dataset.validation_data is not None:
             x_val, y_val = self.dataset.validation_data

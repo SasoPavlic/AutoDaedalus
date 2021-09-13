@@ -5,16 +5,24 @@ from tensorflow.keras import backend as K
 import numpy as np
 from matplotlib import pyplot as plt
 from deepswarm.log import Log
-
 from deepswarm import cfg
 
+
 def unison_shuffled_copies(a, b):
+    """Shuffles a dataset with corresponding labels
+    Returns:
+        shuffled trainX and trainY
+    """
     assert len(a) == len(b)
     p = numpy.random.permutation(len(a))
     return a[p], b[p]
 
 
 def training_loss(history, epochs=cfg['backend']['epochs']):
+    """Visualize plot with loss and val_loss during the training
+    Returns:
+        Loss plot
+    """
     # Loss
     N = np.arange(0, epochs)
     plt.style.use("ggplot")
@@ -31,6 +39,10 @@ def training_loss(history, epochs=cfg['backend']['epochs']):
 
 
 def training_acc(history, epochs=cfg['backend']['epochs']):
+    """Visualize plot with accuracy and val_accuracy during the training
+    Returns:
+        Accuracy plot
+    """
     # Accuracy
     N = np.arange(0, epochs)
     plt.style.use("ggplot")
@@ -82,8 +94,12 @@ def reconstructed_results(model, x_test):
 
     return plt
 
-
+    # TODO Function is named MAE but MSE is calculated. Please re-check
 def MAE_loss(model, x_train, manual_code=False):
+    """Visualize plot with mean absolute error during the training
+    Returns:
+        Prints reconstruction error threshold and returns a plot with MSE during the training
+    """
     # Get train MAE loss.
     decoded = model.predict(x_train)
     errors = []
@@ -112,6 +128,10 @@ def MAE_loss(model, x_train, manual_code=False):
 
 
 def encoded_image(autoencoder, encoder, x_test):
+    """Visualize plot with latent representation of data instance
+    Returns:
+        Plot
+    """
     encoded_imgs = encoder.predict(x_test)
     predicted = autoencoder.predict(x_test)
 

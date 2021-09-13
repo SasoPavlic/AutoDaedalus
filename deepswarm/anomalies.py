@@ -8,6 +8,10 @@ from sklearn.metrics import roc_curve
 
 
 def calculate_confusion_matrix(y_test, valid_label, anomaly_label, idxs):
+    """Compute confusion matrix based on found anomalies in dataset
+    Returns:
+        Calculated metrics
+    """
     all_anomalies = sum(x in anomaly_label for x in y_test)
     all_valid = sum(x in valid_label for x in y_test)
     instaces_in_quantile = np.array(y_test)[idxs.astype(int)]
@@ -20,18 +24,25 @@ def calculate_confusion_matrix(y_test, valid_label, anomaly_label, idxs):
 
 
 def evaluate_anomalies(TP, FN, FP, TN):
+    """Compute recall, precision and F1-score
+    Returns:
+        Recall, Precision, F1-score
+    """
     recall = (TP / (TP + FN))
     precision = ((TP / (TP + FP)))
     F1 = 2 * ((precision * recall) / (precision + recall))
     return (round(recall, 3), round(precision, 3), round(F1, 3))
 
 
-
-
 def calculate_roc_curve(model, x_test, y_test,
          manual_code=False,
          valid_label=data_config['valid_label'],
          anomaly_label=data_config['anomaly_label']):
+    """Compute ROC-AUC values and visualize it in plot
+    Returns:
+        ROC curve on plot
+    """
+
     decoded = model.predict(x_test)
     errors = []
 
@@ -89,12 +100,17 @@ def calculate_roc_curve(model, x_test, y_test,
     return plt
 
 
-# Good tutorial https://www.pyimagesearch.com/2020/03/02/anomaly-detection-with-keras-tensorflow-and-deep-learning/
-
+# Helpful tutorial https://www.pyimagesearch.com/2020/03/02/anomaly-detection-with-keras-tensorflow-and-deep-learning/
+# TODO Refactor function to smaller components (threshold value, anomalies, evaluation metrics, results)
 def find(model, x_test, y_test, quantile=0.99,
          manual_code=False,
          valid_label=data_config['valid_label'],
          anomaly_label=data_config['anomaly_label']):
+
+    """Compute threshold for anomalies. Find anomalies in dataset. Evaluates model
+    Returns:
+        Plot of found anomalies
+    """
 
     decoded = model.predict(x_test)
     errors = []
@@ -186,6 +202,5 @@ def find(model, x_test, y_test, quantile=0.99,
               f"Number of true positives anomalies: {TP}\n"
               f"Valid label/s: {valid_label}\n"
               f"Anomaly label/s: {anomaly_label}")
-
 
     return plt
