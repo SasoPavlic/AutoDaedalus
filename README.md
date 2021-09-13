@@ -26,7 +26,7 @@ Run script with Python`autodaedalus_main.py`
 ### Flowchart 📝
 
 <p align="center">
-  <img src="https://user-images.githubusercontent.com/9087174/55276558-066c5300-52ed-11e9-8bb6-284948cdef67.png" width="300">
+  <img src="https://raw.githubusercontent.com/SasoPavlic/AutoDaedalus/master/AutoDaedalus_flowchart.png">
 </p>
 
 <p align="center">
