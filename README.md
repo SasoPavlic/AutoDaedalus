@@ -17,7 +17,11 @@ The design of neural network architecture is becoming more difficult as the comp
 pip3 install -r requirements.txt
 
 ### Documentation 📘 
-* Master's thesis (link will be available shortly...)
+* **Master's thesis in ENG (just click the pdf icon):**
+    * [Construction of deep neutral networks using swarm intelligence to detect anomalies](https://dk.um.si/IzpisGradiva.php?id=79543&lang=eng)
+* **Experiments results:**
+    *    [Created NN architectures group by N-depth](https://dk.um.si/Dokument.php?id=153745&lang=eng)
+
 
 ### Usage 🔨
 Configure `settings/autoencoder.yaml` according to your needs.
